@@ -91,7 +91,7 @@ ggplot(mobility, aes(Mobility, Gini)) +
   facet_wrap(~State)
 ```
 ```{r}
-northeast <- c("northeast", "CT", "ME", "MA", "NH", "NJ", "NY", "PA", "RI", "VT")
+northeast <- c("CT", "ME", "MA", "NH", "NJ", "NY", "PA", "RI", "VT")
 southeast <- c("AL", "AR", "FL", "GA", "KY", "LA", "MS", "NC", "SC", "TN", "VA", "WV")
 midwest <- c("IL", "IN", "IA", "KS", "MI", "MN", "MO", "NE", "ND", "OH", "SD", "WI")
 southwest <- c("AZ", "NM", "OK", "TX")
@@ -102,10 +102,11 @@ us_regions <- c(northeast, southeast, southwest, midwest, west)
 count <- 1
 
 for (i in mobility$State) {
-  for (j in us_regions) {
-    if (i %in% j) {
-      mobility$region[count] <- j[1]
+  if (i %in% northeast) {
+    mobility$region[count] <- "Northeast"
     }
+  else if (i %in% southeast) {
+    mobility$region[count] <- "Southeast"
   }
   count = count + 1 
 }
