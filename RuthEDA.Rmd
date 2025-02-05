@@ -1,0 +1,63 @@
+---
+title: "RuthEDA"
+author: "Ruth Walters"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+## Exploratory data analysis
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Check which columns have NA/null values
+print(colSums(is.na(mobility)))
+
+```
+
+```{r}
+# Drop columns with >100 NA values
+mobility <- mobility[,!(names(mobility) %in% c("Colleges","Tuition", "Graduation", "HS_dropout"))]
+
+# Drop rows with NAs
+mobility <- drop_na(mobility)
+```
+
+```{r}
+# Recheck NA
+for (i in colSums(is.na(mobility))) {
+  if (as.numeric(i) != 0) {print(i)}
+}
+```
+
+```{r}
+mobility_numeric <- mobility[,!(names(mobility) %in% c("ID","Name", "State", "Latitude", "Longitude"))]
+
+corrplot(cor(mobility_numeric),
+         tl.col = "black",
+         tl.cex = .5, 
+         method = 'color')
+```
+
+
+Mobility appears to be highly positively correlated with the cluster of variables that measure segregation 
+
+We can further identify three clusters of highly correlated variables:
+
+- measures of segregation (`seg_racial`, `seg_income`, and `seg_affluence`)
+- measures of the Gini index (`Gini`, `Share01`, `Gini_99` and `middle_class`)
+- measures of migration (`migration_in` and `migration_out`)
+
+```{r}
+# Drop highly correlated variables
+mobility <- mobility[,!(names(mobility) %in% c("Seg_income","Seg_affluence", "Share01", "Gini_99"))]
+
+mobility_numeric <- mobility[,!(names(mobility) %in% c("ID","Name", "State", "Latitude", "Longitude"))]
+```
+
+```{r}
+ggplot(mobility, aes(Mobility, Gini)) + 
+  geom_point() +
+  facet_wrap(~State)
+```
