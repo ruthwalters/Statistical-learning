@@ -1,0 +1,137 @@
+---
+title: "Project1"
+author: "Ruth Walters"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Import dependencies
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(tidyr)
+
+theme_set(theme_bw())
+
+# Import data
+mobility <- read.csv("mobility-all.csv", header = TRUE)
+```
+
+## Introduction
+*Write four to five sentences introducing the research problem and describing specific research hypotheses. Cite any information sources in parentheses or foot- or end- notes.*
+
+**Research questions**:
+
+1. Which variables are the most important variables for predicting economic mobility?
+2. To what extent do measures of better education predict higher levels of economic mobility?
+3. To what extent do measures of integration across social groups predict economic mobility?
+4. To what extent do variables which can be directly affected by government policy predict economic mobility?
+
+## Exploratory data analysis
+*Visually and numerically investigate which variables seem associated with economic mobility?*
+- *Examine the (predictor and response) variables univariately and multivariately. You will likely not be able to include all of the plots, think carefully about which ones would be good to include.*
+- *Are there any variables that you would consider transforming based on the plots?*
+
+```{r}
+# Check which columns have NA/null values
+print(colSums(is.na(mobility)))
+
+# for (i in colSums(is.na(mobility))) {
+#   if (i != 0) {print(i)}
+# }
+```
+```{r}
+# Drop columns with >100 NA values
+mobility <- mobility[,!(names(mobility) %in% c("Colleges","Tuition", "Graduation", "HS_dropout"))]
+
+# Drop rows with NAs
+mobility <- drop_na(mobility)
+```
+
+```{r}
+# Recheck NA
+for (i in colSums(is.na(mobility))) {
+  if (as.numeric(i) != 0) {print(i)}
+}
+```
+
+
+```{r}
+mobility_numeric <- mobility[,!(names(mobility) %in% c("ID","Name", "State", "Latitude", "Longitude"))]
+
+corrplot(cor(mobility_numeric),
+         tl.col = "black",
+         tl.cex = .5, 
+         method = 'color')
+```
+
+Mobility appears to be highly positively correlated with the cluster of variables that measure segregation 
+
+We can further identify three clusters of highly correlated variables:
+
+- measures of segregation (`seg_racial`, `seg_income`, and `seg_affluence`)
+- measures of the Gini index (`Gini`, `Share01`, `Gini_99` and `middle_class`)
+- measures of migration (`migration_in` and `migration_out`)
+
+```{r}
+# Drop highly correlated variables
+mobility <- mobility[,!(names(mobility) %in% c("Seg_income","Seg_affluence", "Share01", "Gini_99"))]
+
+mobility_numeric <- mobility[,!(names(mobility) %in% c("ID","Name", "State", "Latitude", "Longitude"))]
+```
+
+```{r}
+ggplot(mobility, aes(Mobility, Gini)) + 
+  geom_point() +
+  facet_wrap(~State)
+```
+```{r}
+northeast <- c("northeast", "CT", "ME", "MA", "NH", "NJ", "NY", "PA", "RI", "VT")
+southeast <- c("AL", "AR", "FL", "GA", "KY", "LA", "MS", "NC", "SC", "TN", "VA", "WV")
+midwest <- c("IL", "IN", "IA", "KS", "MI", "MN", "MO", "NE", "ND", "OH", "SD", "WI")
+southwest <- c("AZ", "NM", "OK", "TX")
+west <- c("AK", "CA", "CO", "HI", "ID", "MT", "NV", "OR", "UT", "WA", "WY")
+
+us_regions <- c(northeast, southeast, southwest, midwest, west)
+
+count <- 1
+
+for (i in mobility$State) {
+  for (j in us_regions) {
+    if (i %in% j) {
+      mobility$region[count] <- j[1]
+    }
+  }
+  count = count + 1 
+}
+
+
+```
+
+
+## Model selection
+
+### Initial modeling
+*Start by building a multivariate linear regression using the covariates to predict mobility variable. Address the specific questions of above when building the model. Be sure to justify the choices you made in building this initial model*
+
+### Diagnostics
+- Are the basic assumptions met for your multivariate linear regression model? Why or why not?
+- What transformations do you choose (if any)? Why?
+- Are there any outliers in your sample overly influencing your model? Identify any outlier candidates and decide whether or not to remove them. Give details.
+- Do you exclude any variables? Why? All exclusions/inclusions must be justified
+
+### Final model selection
+
+
+## Model results
+Create a table that summarizes your final model (coefficients, standard errors, confidence intervals, p-values). Provide interpretations of all your coefficients in the con- text of the problem. Be sure to address the specific questions of the client (above).
+
+## Discussion
+What are your conclusions? Identify a few key findings, and discuss, with reference to the supporting evidence. Can
+you come up with explanations for the patterns you have found? Suggestions or recommendations for the client? How could your analysis be improved? (6–8 sentences)
+
