@@ -1,0 +1,90 @@
+---
+title: "Model"
+output: html_document
+---
+
+#To do:
+
+check condictions
+and make initial model
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+get packages. 
+```{r}
+library(tidyverse)
+library(caTools)
+set.seed(123)
+```
+
+
+get all of the correlated values and then, plot all the data points to do able to see if they follow any of the conditions. But then also they may not be good indicators.
+
+```{r}
+
+ref_var <- mobility_numeric[[1]]
+
+selected_columns <- sapply(mobility_numeric, function(x) {
+  # Calculate correlation; use "complete.obs" to handle missing values if needed.
+  cor(x, ref_var, use = "complete.obs") > 0.145
+})
+
+nice <- mobility_numeric[, selected_columns]
+
+```
+
+gotta plot these I guess
+```{r}
+nice_long <- nice %>%
+  pivot_longer(cols = -Mobility, names_to = "variable", values_to = "value")
+
+# Create the scatterplots using ggplot2 with faceting.
+ggplot(nice_long, aes(x = Mobility, y = value)) +
+  geom_point() +
+  facet_wrap(~ variable, scales = "free_y") +  # Use free y scales if the ranges differ.
+  labs(title = "Scatterplots of Different Variables vs. x")
+```
+
+wtf is going on here...... Get teenage_labor OUT OF HERE
+we may need to get married out of here too, but that could be coincidence that it looks curved. plus progressivity is kinda WACK as well.
+
+in all seriousness a lot of these are some of the tings that I would consider to be factors when thinking about economic mobilty, but we need to see what the other EDA's come up with. But for now this works ¯\_(ツ)_/¯
+
+#thigy linear thingy
+We need to do a train test split because 
+```{r}
+split <- sample.split(mobility_numeric[, selected_columns]$Mobility, SplitRatio = 0.8)
+train <- subset(mobility_numeric[, selected_columns], split)       # Training set (where split == TRUE)
+test_set <- subset(mobility_numeric[, selected_columns], !split)
+```
+
+```{r}
+regressor <- lm(Mobility ~ ., data = train)
+
+y_pred <- predict(regressor, newdata = test_set)
+```
+
+```{r}
+print(regressor)
+summary(regressor)
+```
+WOT this is kinda good let me read up on it real fast. But since this is kinda of a good linear model, we just wait for the other EDA's ¯\_(ツ)_/¯. But in the mean time lets read up on how we can make this even better.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
