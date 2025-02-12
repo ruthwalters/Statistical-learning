@@ -1,21 +1,9 @@
 ---
-title: "RuthEDA"
+title: "modelConstruction"
 author: "Ruth Walters"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
-```{r}
-# Import dependencies
-library(ggplot2)
-library(dplyr)
-library(corrplot)
-library(tidyr)
-
-theme_set(theme_bw())
-
-# Import data
-mobility <- read.csv("mobility-all.csv", header = TRUE)
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -150,35 +138,22 @@ mobility <- mobility[,!(names(mobility) %in% c("Seg_income", "Seg_affluence", "G
 
 
 ```{r}
-a <- ggplot(data = mobility, aes(x = Mobility, y = Gini, col = Progressivity)) + 
-  geom_point(alpha = .3) + 
-  ggtitle("Progressivity") + 
-  xlab(" ") + 
-  theme(axis.title.x = element_text(hjust = 0))
+a <- ggplot(data = mobility, aes(x = Mobility, y = School_spending)) + 
+  geom_point(color = "cornflowerblue", alpha = .3) + 
+  #stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "darkorange") +
+  stat_cor(label.x=.17, label.y=10.5) +
+  ggtitle("School spending")
     
-b <- ggplot(data = mobility, aes(x = Mobility, y = Single_mothers)) + 
+b <- ggplot(data = mobility, aes(x = Mobility, y = Student_teacher_ratio)) + 
   geom_point(color = "skyblue", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.3, label.size = 0.05) +
-  ggtitle("Proportion of single mothers")
+  stat_cor(label.x=.17, label.y=22, label.size = 0.05) +
+  ggtitle("Student teacher ratio")
 
-c <- ggplot(data = mobility, aes(x = Mobility, y = Gini, col = Urban)) + 
-  geom_point( alpha = .3) +
-  ggtitle("Urban communities") + 
-  xlab("Mobility") + 
-  ylab("Gini index") +
-  theme(axis.title.x = element_text(hjust = 0),
-        axis.title.y = element_text(angle=90, hjust = 0, margin = margin(r = 5)))
-
-d <- ggplot(data = mobility, aes(x = Mobility, y = Violent_crime)) + 
-  geom_point(color = "seagreen", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.004) +
-  ggtitle("Violent crime incidence") 
-
-plot_row <- plot_grid(c,a,b,d, align = "none")
+plot_row <- plot_grid(a,b, align = "hv")
 
 title <- ggdraw() + 
   draw_label(
-    "Community factors associated with mobility",
+    "Educational factors associated with mobility",
     fontface = 'bold',
     x = 0,
     hjust = 0) +
@@ -189,3 +164,31 @@ plot_grid(
   rel_heights = c(0.1, 1)
 )
 ```
+
+## Modeling
+
+```{r}
+lm.1 <- lm(formula = Mobility ~ ., 
+   data = mobility)
+
+summary(lm.1)
+```
+Extract highly correlated variables:
+
+- `Black`
+- `Seg_racial`
+- `Commute`
+- `Gini`
+- `Middle_class`
+- `Progressivity`
+- `Manufacturing`
+- `Migration_in`
+- `Religious`
+- `Violent_crime`
+- `Single mothers`
+- `Divorced`
+
+```{r}
+
+```
+
