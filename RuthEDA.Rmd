@@ -31,6 +31,7 @@ library(corrplot)
 library(tidyr)
 library(cowplot)
 library(ggpubr)
+library(GGally)
 
 theme_set(theme_bw())
 theme_update(
@@ -86,16 +87,47 @@ corrplot(cor(mobility),
          method = 'color')
 ```
 
-### Social determinants of mobility
-Goal: explore potential social determinants of mobility
-
-Selected variables:
-- segregation variables `Seg_racial`, `Seg_income`, `Seg_poverty`, and `Seg_affluence`
-- educational variables `School_spending`, `Student_teacher_ratio`, and `Test_scores`
-- family dynamic variables `Single_mothers`, `Divorced`
-
+### Explore highly correlated variables
 #### Segregation
 
+
+```{r}
+mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
+          title = "Colinearity analysis of segregation",
+          progress = FALSE)
+```
+
+
+While segregation on poverty lines is not particularly well correlated with segregation on racial lines, is is highly associated with segregation by affluence and segregation by income, which are also highly associated with each other. Since `Seg_poverty`, `Seg_affluence` and `Seg_income` are so strongly co-linear, `Seg_affluence` and `Seg_income` will be removed from the model. 
+
+#### Income and income inequality
+
+```{r}
+mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
+          title = "Colinearity analysis of income and income inequality",
+          progress = FALSE)
+```
+
+
+The `Middle_class` variable is colinear with `Gini` and `Gini_99`, while the `Share01` variable is colinear with `Gini`. Additionally, `Gini` seems to be highly predictive of `Gini_99`. `Income` is not strongly associated with any of the other variables examined. 
+
+### Explore non-linear variables
+```{r}
+mobility %>%
+  gather(-Mobility, key = "var", value = "value") %>%
+  ggplot(aes(x = value, y = Mobility)) +
+  geom_point(alpha = 0.3) +
+  facet_wrap(~ var, scales = "free")
+
+```
+
+### Social determinants of mobility
 
 ```{r}
 a <- ggplot(data = mobility, aes(x = Mobility, y = Seg_racial)) + 
@@ -104,10 +136,10 @@ a <- ggplot(data = mobility, aes(x = Mobility, y = Seg_racial)) +
   stat_cor(label.x=.17, label.y=.5) +
   ggtitle("Race")
     
-b <- ggplot(data = mobility, aes(x = Mobility, y = Seg_income)) + 
-  geom_point(color = "skyblue", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.12) +
-  ggtitle("Income")
+# b <- ggplot(data = mobility, aes(x = Mobility, y = Seg_income)) + 
+#   geom_point(color = "skyblue", alpha = .3) +
+#   stat_cor(label.x=.17, label.y=.12) +
+#   ggtitle("Income")
 
 c <- ggplot(data = mobility, aes(x = Mobility, y = Seg_poverty)) + 
   geom_point(color = "mediumseagreen", alpha = .3) +
@@ -119,13 +151,13 @@ c <- ggplot(data = mobility, aes(x = Mobility, y = Seg_poverty)) +
   theme(axis.title.x = element_text(hjust = 0),
         axis.title.y = element_text(angle=90, hjust = 0, margin = margin(r = 5)))
 
-d <- ggplot(data = mobility, aes(x = Mobility, y = Seg_affluence)) + 
-  geom_point(color = "seagreen", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.15) +
-  ylim(0,.17) +
-  ggtitle("Affluence") 
+# d <- ggplot(data = mobility, aes(x = Mobility, y = Seg_affluence)) + 
+#   geom_point(color = "seagreen", alpha = .3) +
+#   stat_cor(label.x=.17, label.y=.15) +
+#   ylim(0,.17) +
+#   ggtitle("Affluence") 
 
-plot_row <- plot_grid(a,b,c,d, align = "hv")
+plot_row <- plot_grid(c,a, align = "hv")
 
 title <- ggdraw() + 
   draw_label(
@@ -140,41 +172,41 @@ plot_grid(
   rel_heights = c(0.1, 1)
 )
 ```
-Remove highly correlated variables:
-```{r}
-mobility <- mobility[,!(names(mobility) %in% c("Seg_income", "Seg_affluence", "Gini_99", "Share01"))]
-```
 
+```{r warning=FALSE}
+mobility$Urban <- as.factor(mobility$Urban)
 
-#### Educational outcomes
+theme_update(
+  axis.title.x = element_text(hjust = 0),  
+  axis.title.y = element_text(element_text(angle=90, hjust = 0, margin = margin(r = 5)))) 
 
-
-```{r}
-a <- ggplot(data = mobility, aes(x = Mobility, y = Gini, col = Progressivity)) + 
-  geom_point(alpha = .3) + 
+a <- ggplot(data = mobility, aes(x = Progressivity, y = Mobility)) + 
+  geom_smooth() + 
   ggtitle("Progressivity") + 
-  xlab(" ") + 
-  theme(axis.title.x = element_text(hjust = 0))
-    
-b <- ggplot(data = mobility, aes(x = Mobility, y = Single_mothers)) + 
-  geom_point(color = "skyblue", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.3, label.size = 0.05) +
-  ggtitle("Proportion of single mothers")
+  xlab("Progressivity") +
+  ylab(" ")
 
-c <- ggplot(data = mobility, aes(x = Mobility, y = Gini, col = Urban)) + 
-  geom_point( alpha = .3) +
+b <- ggplot(data = mobility, aes(x = Urban, y = Mobility)) + 
+  geom_bar(position='dodge', stat='summary', fun='mean', alpha = .3) +
   ggtitle("Urban communities") + 
-  xlab("Mobility") + 
-  ylab("Gini index") +
-  theme(axis.title.x = element_text(hjust = 0),
-        axis.title.y = element_text(angle=90, hjust = 0, margin = margin(r = 5)))
+  xlab("Community type") + 
+  ylab("Average mobility")
 
-d <- ggplot(data = mobility, aes(x = Mobility, y = Violent_crime)) + 
-  geom_point(color = "seagreen", alpha = .3) +
-  stat_cor(label.x=.17, label.y=.004) +
-  ggtitle("Violent crime incidence") 
+c <- ggplot(data = mobility, aes(x = Single_mothers, y = Mobility)) + 
+  geom_point(alpha = .3, pch = 16) +
+  stat_cor(label.x=.17, label.y=.3, label.size = 0.01) +
+  ggtitle("Proportion of single mothers") +
+  xlab("p Single mothers") +
+  ylab("Mobility")
 
-plot_row <- plot_grid(c,a,b,d, align = "none")
+d <- ggplot(data = mobility, aes(x = Violent_crime, y = Mobility)) + 
+  geom_violin() +
+  stat_cor(label.x=.0031, label.y=.3, label.size = 0.001) +
+  xlab("Violent crime") + 
+  ylab("Mobility") + 
+  ggtitle("Violent crime incidence")
+
+plot_row <- plot_grid(a,b,c,d, align = "none")
 
 title <- ggdraw() + 
   draw_label(
