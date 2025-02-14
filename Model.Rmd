@@ -10,6 +10,7 @@ and make initial model
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+install.packages("betareg")
 ```
 
 
@@ -17,70 +18,114 @@ get packages.
 ```{r}
 library(tidyverse)
 library(caTools)
+library(gridExtra)
+library(lmtest)
+library(sandwich)
+library(car)
+library(caret)
+library(nlme)
+library(betareg )
 set.seed(123)
 ```
 
 
-get all of the correlated values and then, plot all the data points to do able to see if they follow any of the conditions. But then also they may not be good indicators.
-
 ```{r}
+plot(lm.1)
+```
 
-ref_var <- mobility_numeric[[1]]
 
-selected_columns <- sapply(mobility_numeric, function(x) {
-  # Calculate correlation; use "complete.obs" to handle missing values if needed.
-  cor(x, ref_var, use = "complete.obs") > 0.145
-})
+need to get the high correlated values for each eda then we can do from there
+```{r}
+edu_corval <- c("School_spending", "Test_scores", "Colleges") #for edu stuff
+social_cor <- c("Black", "Seg_racial", "Commute", "Gini", "Middle_class", 
+               "Progressivity", "Manufacturing", "Migration_in", "Religious", 
+               "Violent_crime", "Single mothers", "Divorced") #social stuff
 
-nice <- mobility_numeric[, selected_columns]
+high_cor <- mobility[, names(mobility) %in% c("Mobility",edu_corval, social_cor)]
 
 ```
 
-gotta plot these I guess
 ```{r}
-nice_long <- nice %>%
-  pivot_longer(cols = -Mobility, names_to = "variable", values_to = "value")
+yikes <- lm(Mobility ~ ., data = high_cor)
 
-# Create the scatterplots using ggplot2 with faceting.
-ggplot(nice_long, aes(x = Mobility, y = value)) +
-  geom_point() +
-  facet_wrap(~ variable, scales = "free_y") +  # Use free y scales if the ranges differ.
-  labs(title = "Scatterplots of Different Variables vs. x")
+plot(yikes)
+```
+get vif score for colinearity.
+```{r}
+vif(yikes)
+```
+nothing moajor above but may need to reasses if not good enough 
+Do something call robust standard errors test that I found out to deal with that shit
+```{r}
+coeftest(yikes, vcov = vcovHC(yikes, type = "HC3"))
 ```
 
-wtf is going on here...... Get teenage_labor OUT OF HERE
-we may need to get married out of here too, but that could be coincidence that it looks curved. plus progressivity is kinda WACK as well.
-
-in all seriousness a lot of these are some of the tings that I would consider to be factors when thinking about economic mobilty, but we need to see what the other EDA's come up with. But for now this works ¯\_(ツ)_/¯
-
-#thigy linear thingy
-We need to do a train test split because 
+refitting after all this shit.
 ```{r}
-split <- sample.split(mobility_numeric[, selected_columns]$Mobility, SplitRatio = 0.8)
-train <- subset(mobility_numeric[, selected_columns], split)       # Training set (where split == TRUE)
-test_set <- subset(mobility_numeric[, selected_columns], !split)
+yikes_refit <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor)
+coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
 ```
 
 ```{r}
-regressor <- lm(Mobility ~ ., data = train)
-
-y_pred <- predict(regressor, newdata = test_set)
+summary(yikes_refit)
 ```
 
 ```{r}
-print(regressor)
-summary(regressor)
+plot(yikes_refit )
 ```
-WOT this is kinda good let me read up on it real fast. But since this is kinda of a good linear model, we just wait for the other EDA's ¯\_(ツ)_/¯. But in the mean time lets read up on how we can make this even better.
 
 
+```{r}
+high_cor_clean <- high_cor[-c(320, 325, 326), ]
+yikes_clean <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor_clean)
+summary(yikes_clean)
+plot(yikes_clean)
+```
 
 
+Since what we are doing to trying to perdict a probability we need to do something the regresses off of a probability because DUH!! Kinda makes since right? Wish we learned more models instead of getting hit with some meaningless thoery that he said he would hide but does it anyway because he likes it. LIKE THE THOERY IS NOT EASY FOR UNDERGRADS..... But what do I know.... I just work here. never looked to see if it followed a beta distribution...
 
 
+Does this look like a beta distribution
+```{r}
+
+hist(high_cor$Mobility, breaks = 30, probability = TRUE, main = "Histogram of Mobility", col = "lightblue")
+
+```
+Above not conclusive numeric test is needed
+```{r}
+library(MASS)
+
+# Fit beta distribution parameters
+mobility_fit <- fitdistr(high_cor$Mobility, "beta", start = list(shape1 = 2, shape2 = 5))
+
+# Generate theoretical beta values
+x_vals <- seq(min(high_cor$Mobility), max(high_cor$Mobility), length.out = 100)
+beta_vals <- dbeta(x_vals, mobility_fit$estimate[1], mobility_fit$estimate[2])
+
+# Plot the histogram and beta density curve
+hist(high_cor$Mobility, breaks = 30, probability = TRUE, col = "lightblue", main = "Fit of Beta Distribution")
+lines(x_vals, beta_vals, col = "red", lwd = 2)
+
+ks.test(high_cor$Mobility, "pbeta", mobility_fit$estimate[1], mobility_fit$estimate[2])
+
+```
+p value > 0.5 so it is a beta distribution. shocking, now we can use beta regression.
 
 
+```{r}
+yikes_beta <- betareg(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, 
+                      data = high_cor)
+summary(yikes_beta)
+plot(yikes_beta)
+```
 
+comparing models... Seeing if black varies on middle class.
+```{r}
+yikes_interact <- betareg(Mobility ~ Black * Middle_class + Seg_racial + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor)
+summary(yikes_interact)
+plot(yikes_interact)
+```
 
 
 
