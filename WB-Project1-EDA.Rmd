@@ -1,0 +1,274 @@
+---
+title: "DASC32103Project1-WIlliamBuckey"
+output: pdf_document
+date: "2025-02-05"
+---
+
+```{r echo=TRUE}
+library(grid)
+library(ggpubr)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+library(ggpubr)
+library(cowplot)
+library(gridExtra)
+library(MASS) 
+library(car) 
+library(boot)
+library(dplyr)
+library(tidyr)
+mobility_data <- read.csv("mobility-all.csv")
+```
+
+```{r echo=FALSE}
+#data cleaning
+quals <- c("ID","Name", "State", "Latitude", "Longitude")
+
+mobility_data <- mobility_data[,!(names(mobility_data) %in% quals)]
+
+
+print(colSums(is.na(mobility_data)))
+```
+
+```{r}
+mobility_data <- drop_na(mobility_data)
+library(dplyr)
+
+# correlation matrix
+cor_matrix <- cor(mobility_data, use = "pairwise.complete.obs")
+
+# heatmap
+corrplot(cor_matrix,
+         method = "color",  
+         tl.col = "black",  
+         tl.cex = 0.3)       
+
+cor_df <- as.data.frame(as.table(cor_matrix))
+
+# Remove diagonal correlations
+cor_df <- cor_df %>%
+  filter(Var1 != Var2)
+
+# Standardize Var1 & Var2
+cor_df <- cor_df %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(pair = paste(sort(c(Var1, Var2)), collapse = "_")) %>%
+  dplyr::distinct(pair, .keep_all = TRUE) %>%
+  dplyr::select(-pair)
+
+# Sort by correlation
+top_corr <- cor_df %>%
+  arrange(desc(abs(Freq))) %>%  
+  head(50)  
+
+# Print
+print(top_corr)
+```
+
+```{r}
+library(dplyr)
+# Define policy-driven variables
+policy_vars <- c("Local_tax_rate", "Local_gov_spending", "Progressivity", "Gini", 
+                 "School_spending", "Gini_99", "Test_scores", 
+                 "HS_dropout", "Middle_class", "Social_capital", 
+                 "Colleges", "Tuition", "Single_mothers")
+
+# Correlation matrix
+cor_matrix <- cor(mobility_data, use = "pairwise.complete.obs")
+
+# Convert matrix into a dataframe
+cor_df <- as.data.frame(as.table(cor_matrix))
+
+# Remove diagonal correlations
+cor_df <- cor_df %>%
+  filter(Var1 != Var2)
+
+# Standardize Var1 & Var2
+cor_df <- cor_df %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(pair = paste(sort(c(Var1, Var2)), collapse = "_")) %>%  
+  dplyr::distinct(pair, .keep_all = TRUE) %>%
+  dplyr::select(-pair) 
+
+# Find top 5 correlated variables
+top_correlations <- list()
+
+for (var in policy_vars) {
+  top_5 <- cor_df %>%
+    filter(Var1 == var | Var2 == var) %>% 
+    arrange(desc(abs(Freq))) %>% 
+    head(5)  
+  top_correlations[[var]] <- top_5
+}
+
+# Display 
+print(top_correlations)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(mobility_data, aes(.data[[x_var]], School_spending)) +  
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  # Add linear regression line
+    stat_cor(label.x = min(mobility_data[[x_var]], na.rm = TRUE), 
+             label.y = max(mobility_data$School_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) +  # Adds R & p-values 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plot vs mobility
+mobility_plot <- plot_scatter("Mobility", "mediumseagreen", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs School Spending")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "mediumseagreen", r_p_size = 2)
+p2 <- plot_scatter("Gini", "mediumseagreen", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "mediumseagreen", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "mediumseagreen", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "mediumseagreen", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "mediumseagreen", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Display all other plots on one page
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2, 
+              top = textGrob("Demographic Variables vs School Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+```{r, message=FALSE, warning=FALSE}
+data <- mobility_data
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_tax_rate)) + 
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]]), 
+             label.y = max(data$Local_tax_rate, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(), 
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plot vs Mobility
+mobility_plot <- plot_scatter("Mobility", "dodgerblue", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs Local Tax Rate")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "dodgerblue", r_p_size = 2)
+p2 <- plot_scatter("Gini", "dodgerblue", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "dodgerblue", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "dodgerblue", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "dodgerblue", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "dodgerblue", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Tax Rate", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_gov_spending)) +  
+    geom_point(color = color, alpha = .3, na.rm = TRUE) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]], na.rm = TRUE), 
+             label.y = max(data$Local_gov_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) +  
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10)  
+    )
+}
+
+# Create plot vs Mobility
+mobility_plot <- plot_scatter("Mobility", "tomato", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs Local Government Spending")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "tomato", r_p_size = 2)
+p2 <- plot_scatter("Gini", "tomato", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "tomato", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "tomato", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "tomato", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "tomato", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Government Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+
+```
+```{r}
+mobility_data[c("Local_tax_rate", "Local_gov_spending", "School_spending", "Mobility")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 3)),
+          columnLabels = c("Tax Rate", "Gov Spending", "School Spending", "Mobility"),
+          title = "Colinearity analysis of Government Policy",
+          progress = FALSE)
+```
+
+
+```{r}
+
+# Define predictor variables
+candidate_vars <- c("Local_tax_rate", "Local_gov_spending", "School_spending", 
+                    "Income", "Black", "Seg_racial", "Seg_income", "Gini", "Middle_class",
+                    "School_spending_sq", "Tax_Spend_interaction")
+
+# Model formula
+full_formula <- as.formula(paste("Mobility ~", paste(candidate_vars, collapse = " + ")))
+
+# Fit the full model
+full_model <- lm(full_formula, data = mobility_data)
+summary(full_model)
+
+# Stepwise selection (both directions)
+best_model <- stepAIC(full_model, direction = "both", trace = FALSE)
+summary(best_model)
+
+# Multicollinearity check using VIF
+vif_values <- vif(best_model)
+print(vif_values)
+
+# Final model
+final_model <- best_model
+summary(final_model)
+
+
+# Final model’s formula to a GLM with Gaussian family
+model_glm <- glm(formula(final_model), data = model_data, family = gaussian())
+
+cv_error <- cv.glm(model_data, model_glm, K = 10)
+cat("Cross-Validation Error:", cv_error$delta[1], "\n")
+```
