@@ -365,6 +365,8 @@ plot_grid(title,
           rel_heights = c(0.1, 1))
 ```
 
+These results state to us that while there might be outlier data in all 3 relational graphs, there is still a somewhat linear relationship between mobility and tax rate. This is interesting because `School_spending` had was more highly correlated with `Mobility` than with demographic factors. `School_spending` and `Local_gov_spedning` do not seem to show the linear trends, but since `School_spending` had is so highly correlated with other demographic factors, it's inclusion in the model is justified.
+
 ## Segregation factors
 
 Covariate analysis of segregation factors (`Seg_racial`, `Seg_poverty`, `Seg_affluence` and `Seg_income`- see **Appendix B.4**) indicated that, while segregation on poverty lines is not particularly well correlated with segregation on racial lines, it is highly associated with segregation by affluence and segregation by income, which are also highly associated with each other. Since `Seg_poverty`, `Seg_affluence` and `Seg_income` are so strongly co-linear, `Seg_affluence` and `Seg_income` will be removed from the model. 
