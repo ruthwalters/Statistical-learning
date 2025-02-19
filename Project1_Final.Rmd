@@ -1,0 +1,190 @@
+---
+title: "Final Project"
+author: "Ruth Walters"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(tidyr)
+library(cowplot)
+library(ggpubr)
+library(GGally)
+library(grid)
+library(gridExtra)
+library(MASS)
+library(car)
+library(boot)
+
+
+theme_set(theme_bw())
+theme_update(
+  plot.title = element_text(size = 12, face = "italic"), 
+  axis.title.x = element_text(hjust = 0),
+  axis.title.y = element_text(angle=90, hjust = 0, margin = margin(r = 5))
+)
+```
+
+# Introduction
+
+Economic mobility, or the ability of an individual to raise their economic status throughout their lifetime, is a marker of a healthy society. As economic mobility declines and income inequality rises throughout the United States, it is of increasing interest to determine which factors contribute to immobility. In this paper, we will investigate the correlation between economic, educational, and policy factors that contribute to economic mobility. We hypothesize that economic factors such as income inequality, will be most predictive of economic mobility.
+
+# Exploratory data analysis
+
+```{r}
+# Read in the mobility dataframe
+mobility <- read.csv("mobility-all.csv", 
+                     header = TRUE, 
+                     stringsAsFactors = TRUE)
+
+# Remove rows where a value for mobility is missing
+mobility <- mobility %>%
+  drop_na(Mobility) 
+```
+
+## Education analysis
+
+```{r}
+# Segment education-related variables
+
+# edu_mobility <- mobility %>% 
+#   select(Mobility, School_spending, Student_teacher_ratio, Test_scores, HS_dropout, Colleges, Tuition, Graduation)
+
+edu_mobility <- mobility[,(names(mobility) %in% c("Mobility", 
+                                                   "School_spending", 
+                                                   "Student_teacher_ratio", 
+                                                   "Test_scores", 
+                                                   "HS_dropout", 
+                                                   "Colleges", 
+                                                   "Tuition", 
+                                                   "Graduation"))]
+
+# Drop NAs
+edu_mobility <- drop_na(edu_mobility)
+```
+
+```{r}
+# Plot tuition distribution
+p1 <- ggplot(edu_mobility, aes(x= Tuition)) + 
+  geom_histogram(bins = 30, fill = 'lightblue', color = 'black') + 
+  ggtitle("Tuition distribution") +
+  xlab("Tuition costs ($)") + 
+  ylab("Frequency") +
+  scale_x_continuous(labels = scales::dollar_format())
+
+p2 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
+  geom_point(color = "lightblue") + 
+  ggtitle("Tuition vs mobility") +
+  xlab("Tuition costs ($)") +
+  ylab("Mobility") +
+  scale_x_continuous(labels = scales::dollar_format())
+
+# p1 / p2
+
+# Plot school spending distributions
+p3 <- ggplot(edu_mobility, aes(x= School_spending)) + 
+  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
+  ggtitle("School Spending Distribution") +
+  xlab("School spending ($)") +
+  ylab("Frequency") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+p4 <- ggplot(edu_mobility, aes(x = School_spending, y= Mobility)) + 
+  geom_point(color = "lightblue")  + 
+  ggtitle("School Spending vs Mobility") +
+  xlab("School spending ($)") + 
+  ylab("Mobility") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+#(p1 + p3) / (p2 + p4)
+plot_grid(p1,p3,p2,p4, align = "hv")
+```
+
+
+
+
+
+```{r}
+# Plot student teach ratio distribution
+p1 <- ggplot(edu_mobility, aes(x= Student_teacher_ratio)) + 
+  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
+  ggtitle("Student Teacher Ratio Distribution") +
+  xlab("Student-teacher ratio") +
+  ylab("Frequency") 
+
+p2 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) + 
+  geom_point(color = "lightblue")  + 
+  ggtitle("Student Teacher Ratio vs Mobility") +
+  xlab("Student-teacher ratio") +
+  ylab("Mobility")
+
+#p1 / p2
+
+# Plot test score distribution
+p3 <- ggplot(edu_mobility, aes(x= Test_scores)) + 
+  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
+  ggtitle("Test Scores Distribution")+
+  xlab("Test scores") +
+  ylab("Frequency") 
+
+p4 <- ggplot(edu_mobility, aes(x = Test_scores, y= Mobility)) + 
+  geom_point(color = "lightblue")  + 
+  ggtitle("Test Scores vs Mobility")+
+  xlab("Test scores") +
+  ylab("Mobility")
+
+#(p1 + p3) / (p2 + p4)
+plot_grid(p1,p3,p2,p4, align = "hv")
+```
+
+
+
+
+
+```{r}
+p1 <- ggplot(edu_mobility, aes(x= HS_dropout)) + 
+  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
+  ggtitle("HS Dropout Distribution") +
+  xlab("High school dropout rate") +
+  ylab("Frequency")
+
+p2 <- ggplot(edu_mobility, aes(x = HS_dropout, y= Mobility)) + 
+  geom_point(color = "lightblue")  + 
+  ggtitle("HS Dropout vs Mobility") + 
+  xlab("High school dropout rate") +
+  ylab("Mobility")
+
+#p1 / p2
+plot_grid(p1,p2, align = "hv")
+```
+
+```{r}
+cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
+corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         col = colorRampPalette(c("white", "lightblue", "royalblue3"))(200),
+         tl.cex = 0.6, 
+         number.cex = 0.8,
+         addCoef.col = "black",
+         tl.col = "black")
+```
+
+## 
+
+
+## 
+```{r}
+# Remove columns where more than 100 values are missing
+bad_cols <- c("Colleges","Tuition", "Graduation", "HS_dropout") # +100 NULL
+mobility <- mobility[,!(names(mobility) %in% bad_cols)]
+
+# Drop remaining NA variables
+mobility <- drop_na(mobility)
+```
+
