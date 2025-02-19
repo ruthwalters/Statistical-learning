@@ -1,8 +1,8 @@
 ---
 title: "Michael Purtle Model Stuff"
 output:
-  pdf_document: default
   word_document: default
+  pdf_document: default
   html_document: default
 ---
 
@@ -10,7 +10,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, include=FALSE}
 library(tidyverse)
 library(caTools)
 library(gridExtra)
@@ -29,9 +29,30 @@ In our analysis of the factors associated with mobility, we employed both explor
 a multiple linear regression model, and a beta regression model to determine which variables exhibit a strong relationship with our outcome measure. Based on the regression output and correlation values from our EDA, we identified a subset of variables that appear particularly influential in explaining mobility.
 
 ```{r}
-plot(lm.1)
+mobility <- read.csv("mobility-all.csv", header = TRUE, stringsAsFactors = TRUE)
+
+quals <- c("ID","Name", "State", "Latitude", "Longitude")
+
+mobility <- mobility[,!(names(mobility) %in% quals)]
+
+bad_cols <- c("Colleges","Tuition", "Graduation", "HS_dropout") # +100 NULL
+mobility <- mobility[,!(names(mobility) %in% bad_cols)]
+
+before <- nrow(mobility)
+mobility <- drop_na(mobility)
+dropped <- before - nrow(mobility)
+
+print("Data reduced by: ")
+print((dropped/before))
+```
+
+```{r}
+lm.1 <- lm(formula = Mobility ~ ., 
+   data = mobility)
+
 summary(lm.1)
 ```
+
 
 Taking into account the exploratory data analysis and the linear model from above, we now have a list of possible predictors that we can use.
  1. Educational Spending
