@@ -1,9 +1,9 @@
 ---
 title: "Michael Purtle Model Stuff"
 output:
+  pdf_document: default
   word_document: default
   html_document: default
-  pdf_document: default
 ---
 
 ```{r, include = FALSE}
@@ -27,6 +27,7 @@ set.seed(123)
 
 In our analysis of the factors associated with mobility, we employed both exploratory data analysis (EDA) and
 a multiple linear regression model, and a beta regression model to determine which variables exhibit a strong relationship with our outcome measure. Based on the regression output and correlation values from our EDA, we identified a subset of variables that appear particularly influential in explaining mobility.
+
 ```{r}
 plot(lm.1)
 summary(lm.1)
