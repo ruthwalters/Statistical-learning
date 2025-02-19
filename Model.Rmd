@@ -69,14 +69,18 @@ Taking into account the exploratory data analysis and the linear model from abov
     + Religious: Higher religiosity can be associated with stronger community networks or social support, potentially facilitating resource sharing and stability that foster mobility.
     + Violent_crime: High crime rates often correspond to reduced social cohesion and economic investment, negatively affecting people’s prospects for advancement.
     + Single_mothers & Divorced: Family structure measures can indicate economic vulnerability or instability, impacting children’s outcomes and the intergenerational transmission of opportunity.
+  3. Government Spending
+    + Local_tax_rate: The percentage of local taxes levied on residents and businesses. While higher rates can reduce disposable income, they can also fund public services that may boost economic mobility.
+    + Local_goc_spending: Reflects how much local authorities invest in public services, infrastructure, and community programs. Effective spending can expand opportunities and resources, potentially promoting upward mobility.
 
 ```{r}
 edu_corval <- c("School_spending", "Test_scores", "Colleges") #for edu stuff
 social_cor <- c("Black", "Seg_racial", "Commute", "Gini", "Middle_class", 
                "Progressivity", "Manufacturing", "Migration_in", "Religious", 
                "Violent_crime", "Single mothers", "Divorced") #social stuff
+gov_spending_stuff <- c("Local_tax_rate", "Local_goc_spending")
 
-high_cor <- mobility[, names(mobility) %in% c("Mobility",edu_corval, social_cor)]
+high_cor <- mobility[, names(mobility) %in% c("Mobility",edu_corval, social_cor, gov_spending_stuff)]
 
 ```
 
@@ -96,13 +100,13 @@ We fitted the model, now let look for co-linearity between the variables then we
 ```{r}
 vif(yikes)
 ```
-Since the above facotrs are around 1-3, which suggest that col-linearity isn't a huge concern. The highest VIF score is the "Middle_class" (about 4.91), which is borderline but still not extremely high. It's something to keep an eye on, but not a immediate concern.
+Since the above facotrs are around 1-3, which suggest that col-linearity isn't a huge concern. The highest VIF score is the "Middle_class" (about 4.097), which is borderline but still not extremely high. It's something to keep an eye on, but not a immediate concern.
 ```{r}
 coeftest(yikes, vcov = vcovHC(yikes, type = "HC3"))
 ```
-The above result is a summary of each predictors estimated coefficient, its standard error, the t-statistic (coefficient / standard error), and the associated p-value. In short, there are variables like Black, Seg_Racial, Middle_class, Progressivity, Manufacturing, Religious, and Divorced show significant relationships while some of the others do not reach conventional significance thresholds. And we in fact use the more significant variables when choosing our next model below.
+The above result is a summary of each predictors estimated coefficient, its standard error, the t-statistic (coefficient / standard error), and the associated p-value. In short, there are variables like Black, Seg_Racial, Middle_class, Progressivity, Manufacturing, Religious, Divorced, and Local_tax_rate show significant relationships while some of the others do not reach conventional significance thresholds. And we in fact use the more significant variables when choosing our next model below.
 ```{r}
-yikes_refit <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor)
+yikes_refit <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced + Local_tax_rate, data = high_cor)
 coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
 ```
 
@@ -129,7 +133,7 @@ Now er just have to remove the outliers and refit the model.
 
 ```{r}
 high_cor_clean <- high_cor[-c(320, 325, 326, 385, 391, 393), ]
-yikes_clean <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor_clean)
+yikes_clean <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced + Local_tax_rate, data = high_cor_clean)
 summary(yikes_clean)
 plot(yikes_clean)
 ```
@@ -174,7 +178,7 @@ If this returns TRUE, it confirms that all values meet the (0, 1) requirement, a
 
 Beta regression:
 ```{r}
-yikes_beta <- betareg(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, 
+yikes_beta <- betareg(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced + Local_tax_rate, 
                       data = high_cor)
 summary(yikes_beta)
 plot(yikes_beta)
@@ -229,7 +233,8 @@ mean_rmse <- mean(rmse_vals)
 cat("Mean RMSE (5-fold CV):", mean_rmse, "\n")
 ```
 
-The model's fit is strong, as indicated by the AIC (-2960.113) and BIC (-2915.608), which suggest excellent in-sample fit, with lower values signifying a better model. The mean RMSE from the 5-fold cross-validation is 0.0276, meaning that, on average, the model's predictions are off by just 2.8 percentage points—indicating good predictive accuracy. Overall, these results suggest that your beta regression model is well-calibrated, performing well both in terms of fit and prediction. However, comparing these metrics across different models can provide additional insights into the relative performance. for 10 seconds
+The model's fit is strong, as indicated by the AIC (-2972.293) and BIC (-2923.338), which suggest excellent in-sample fit, with lower values signifying a better model. The mean RMSE from the 5-fold cross-validation is 0.0276, meaning that, on average, the model's predictions are off by just 2.8 percentage points—indicating good predictive accuracy. Overall, these results suggest that your beta regression model is well-calibrated, performing well both in terms of fit and prediction. However, comparing these metrics across different models can provide additional insights into the relative performance. 
+
 The negative AIC and BIC values indicate that the model has a high likelihood relative to its complexity, though these measures are most informative when comparing across multiple models. Meanwhile, the mean RMSE of approximately 0.028 suggests that, on average, the model’s predictions deviate from the actual values by about 2.8 percentage points on the 0–1 scale, which is fairly small. Taken together, these results suggest that the beta regression model fits the data well, although further comparisons with alternative models or additional diagnostics would provide a more comprehensive assessment.
 
 
