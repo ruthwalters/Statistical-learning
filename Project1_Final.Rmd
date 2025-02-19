@@ -6,8 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 library(ggplot2)
 library(dplyr)
 library(corrplot)
@@ -151,25 +150,26 @@ p2 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) +
   xlab("Student-teacher ratio") +
   ylab("Mobility")
 
-# Plot school spending distributions
-p3 <- ggplot(edu_mobility, aes(x= School_spending)) + 
-  geom_histogram(bins = 30, fill = 'tomato', color = "black") + 
-  ggtitle("School Spending Distribution") +
-  xlab("School spending ($)") +
-  ylab("Frequency") + 
+# Plot tuition distribution
+p3 <- ggplot(edu_mobility, aes(x= Tuition)) + 
+  geom_histogram(bins = 30, fill = 'tomato', color = 'black') + 
+  ggtitle("Tuition distribution") +
+  xlab("Tuition costs ($)") + 
+  ylab("Frequency") +
   scale_x_continuous(labels = scales::dollar_format())
 
-p4 <- ggplot(edu_mobility, aes(x = School_spending, y= Mobility)) + 
-  geom_point(color = "tomato", alpha = .3)  + 
+p4 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
+  geom_point(color = "tomato", alpha = .3) + 
   stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
-  stat_cor(label.x=7, label.y=.3) +
-  ggtitle("School Spending vs Mobility") +
-  xlab("School spending ($)") + 
-  ylab("Mobility") + 
+  stat_cor(label.x=11000, label.y=.3) +
+  ggtitle("Tuition vs mobility") +
+  xlab("Tuition costs ($)") +
+  ylab("Mobility") +
   scale_x_continuous(labels = scales::dollar_format())
+
 
 #(p1 + p3) / (p2 + p4)
-plot_four(p1,p3,p2,p4, title = "Educational investment as a predictor of economic mobility")
+plot_four(p1,p2,p3,p4, title = "Educational investment as a predictor of economic mobility")
 ```
 
 
@@ -205,62 +205,33 @@ p4 <- ggplot(edu_mobility, aes(x = Test_scores, y= Mobility)) +
   xlab("Test scores") +
   ylab("Mobility")
 
-plot_four(p1,p3,p2,p4, title = "Educational outcomes as a predictor of economic mobility")
-```
 
-
-
-```{r tuition}
-# Plot tuition distribution
-p1 <- ggplot(edu_mobility, aes(x= Tuition)) + 
-  geom_histogram(bins = 30, fill = 'dodgerblue', color = 'black') + 
-  ggtitle("Tuition distribution") +
-  xlab("Tuition costs ($)") + 
-  ylab("Frequency") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-p2 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
-  geom_point(color = "dodgerblue", alpha = .3) + 
-  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
-  stat_cor(label.x=11000, label.y=.3) +
-  ggtitle("Tuition vs mobility") +
-  xlab("Tuition costs ($)") +
-  ylab("Mobility") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-plot_two(p1, p2, title = "Tuition costs as a predictor of economic mobility")
-```
-
-```{r education corrplot}
-cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
-corrplot(cor_matrix, 
-         method = "color",
-         type = "upper",
-         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200),
-         tl.cex = 0.6, 
-         number.cex = 0.8,
-         addCoef.col = "black",
-         tl.col = "black",
-         tl.srt = 30)
+plot_four(p1,p2,p3,p4, title = "Educational outcomes as a predictor of economic mobility")
 ```
 
 ## Policy variables
+
+When examining the mobility dataset, there seemed to be 2 main features that are directly impacted by government policies:
+
+1. *Local tax rate* | Fraction of all income going to local taxes
+2. *School expenditures* | Average spending per pupil in public schools
+3. *Local government spending* | Local government spending per capita
+
+Out of all the variables in the mobility dataset, the local tax rate and school expenditure are the most directly affected by government policy; that is, local tax rate and school spending are dependent on how the government chooses to raise and spend funds.
+
+While `Chinese_imports` and `Manufacturing` were taken into consideration as policy-based predictors, both features were deemed to stem more from business practices that government policy. Chinese imports are impacted by US foreign policy, however, it would be difficult to untangle the competing market and regulatory factors,so it is difficult to say that these variables are linked to US government policy.
+
+After examining the dataset to verify that `School_spending` and `Local_tax_rate` were valid, there was found to be very little missing values for these variables. In fact, it’s less than mobility! This gives assurance that these two variables are valid enough within the dataset to be used as predicting variables.
+
 
 ```{r}
 # Make a correlation matrix
 cor_matrix <- cor(mobility, use = "pairwise.complete.obs")
 
-# Make a heatmap
-corrplot(cor_matrix,
-         method = "color",  
-         tl.col = "black",  
-         tl.cex = 0.5, 
-         tl.srt = 45,
-         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200))       
-
 # Pass the correlation matrix to a dataframe
 cor_df <- as.data.frame(as.table(cor_matrix))
 ```
+
 
 ```{r}
 # Remove diagonal correlations
@@ -277,171 +248,128 @@ cor_df <- cor_df %>%
 # Sort by correlation
 top_corr <- cor_df %>%
   arrange(desc(abs(Freq))) %>%  
-  head(50)  
+  head(50)
 
+# Define policy-driven variables
+policy_vars <- c("Local_tax_rate", "Local_gov_spending", "Progressivity", "Gini", 
+                 "School_spending", "Gini_99", "Test_scores", 
+                 "HS_dropout", "Middle_class", "Social_capital", 
+                 "Colleges", "Tuition", "Single_mothers")
+
+# Correlation matrix
+cor_matrix <- cor(mobility, use = "pairwise.complete.obs")
+
+# Convert matrix into a dataframe
+cor_df <- as.data.frame(as.table(cor_matrix))
+
+# Remove diagonal correlations
+cor_df <- cor_df %>%
+  filter(Var1 != Var2)
+
+# Standardize Var1 & Var2
+cor_df <- cor_df %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(pair = paste(sort(c(Var1, Var2)), collapse = "_")) %>%  
+  dplyr::distinct(pair, .keep_all = TRUE) %>%
+  dplyr::select(-pair) 
+
+# Find top 5 correlated variables
+top_correlations <- list()
+
+for (var in policy_vars) {
+  top_5 <- cor_df %>%
+    filter(Var1 == var | Var2 == var) %>% 
+    arrange(desc(abs(Freq))) %>% 
+    head(5)  
+  top_correlations[[var]] <- top_5
+}
+```
+
+Government policy is first examined by identifying the relationship between the three variables that are selected as predictors and verifying that these variables have a positive correlation between themselves. To verify these relations, a correlation matrix was created using pairwise relations. We highlight the policy-associated variables and display the top 5 variables that are correlated with each. 
+
+```{r echo = TRUE}
 # Print strongest correlations
-print(head(top_corr))
-```
-```{r}
-# Create scatter plots
-plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
-  ggplot(mobility, aes(.data[[x_var]], School_spending)) +  
-    geom_point(color = color, alpha = .3) + 
-    geom_smooth(method = "lm", color = "black", se = FALSE) +  # Add linear regression line
-    stat_cor(label.x = min(mobility[[x_var]], na.rm = TRUE), 
-             label.y = max(mobility$School_spending, na.rm = TRUE) * 0.9, 
-             size = r_p_size) +  # Adds R & p-values 
-    ggtitle(paste(x_var)) + 
-    theme_minimal() +
-    theme(
-      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
-      axis.text = element_text(size = 8),  
-      plot.title = element_text(hjust = 0.5, size = 10) 
-    )
-}
-
-# Create plot vs mobility
-mobility_plot <- plot_scatter("Mobility", "mediumseagreen", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
-  ggtitle("Mobility vs School Spending")
-
-# Create plots for other variables 
-p1 <- plot_scatter("Seg_poverty", "mediumseagreen", r_p_size = 2)
-p2 <- plot_scatter("Gini", "mediumseagreen", r_p_size = 2)
-p3 <- plot_scatter("Gini_99", "mediumseagreen", r_p_size = 2)
-p4 <- plot_scatter("Middle_class", "mediumseagreen", r_p_size = 2)
-p5 <- plot_scatter("Single_mothers", "mediumseagreen", r_p_size = 2)
-p6 <- plot_scatter("Test_scores", "mediumseagreen", r_p_size = 2)
-
-# Display 
-print(mobility_plot)
-
-# Display all other plots on one page
-grid.arrange(
-  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2, 
-              top = textGrob("Demographic Variables vs School Spending", 
-                             gp = gpar(fontsize = 10, fontface = "bold")))
-)
-```
-```{r, message=FALSE, warning=FALSE}
-data <- mobility
-
-# Create scatter plots
-plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
-  ggplot(data, aes(.data[[x_var]], Local_tax_rate)) + 
-    geom_point(color = color, alpha = .3) + 
-    geom_smooth(method = "lm", color = "black", se = FALSE) +  
-    stat_cor(label.x = min(data[[x_var]]), 
-             label.y = max(data$Local_tax_rate, na.rm = TRUE) * 0.9, 
-             size = r_p_size) + 
-    ggtitle(paste(x_var)) + 
-    theme_minimal() +
-    theme(
-      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(), 
-      axis.text = element_text(size = 8),  
-      plot.title = element_text(hjust = 0.5, size = 10) 
-    )
-}
-
-# Create plot vs Mobility
-mobility_plot <- plot_scatter("Mobility", "dodgerblue", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
-  ggtitle("Mobility vs Local Tax Rate")
-
-# Create plots for other variables 
-p1 <- plot_scatter("Seg_poverty", "dodgerblue", r_p_size = 2)
-p2 <- plot_scatter("Gini", "dodgerblue", r_p_size = 2)
-p3 <- plot_scatter("Gini_99", "dodgerblue", r_p_size = 2)
-p4 <- plot_scatter("Middle_class", "dodgerblue", r_p_size = 2)
-p5 <- plot_scatter("Single_mothers", "dodgerblue", r_p_size = 2)
-p6 <- plot_scatter("Test_scores", "dodgerblue", r_p_size = 2)
-
-# Display 
-print(mobility_plot)
-
-# Arrange and display all other plots on one page 
-grid.arrange(
-  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
-              top = textGrob("Demographic Variables vs Local Tax Rate", 
-                             gp = gpar(fontsize = 10, fontface = "bold")))
-)
+print(top_correlations$School_spending)
+print(top_correlations$Local_tax_rate)
+print(top_correlations$Local_gov_spending)
 ```
 
-```{r, message=FALSE, warning=FALSE}
-# Create scatter plots
-plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
-  ggplot(data, aes(.data[[x_var]], Local_gov_spending)) +  
-    geom_point(color = color, alpha = .3, na.rm = TRUE) + 
-    geom_smooth(method = "lm", color = "black", se = FALSE) +  
-    stat_cor(label.x = min(data[[x_var]], na.rm = TRUE), 
-             label.y = max(data$Local_gov_spending, na.rm = TRUE) * 0.9, 
-             size = r_p_size) + 
-    ggtitle(paste(x_var)) +  
-    theme_minimal() +
-    theme(
-      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
-      axis.text = element_text(size = 8),  
-      plot.title = element_text(hjust = 0.5, size = 10)  
-    )
-}
+For the 3 predicting variables, all 3 are were correlated the  highly with each other. `School_spending`, `Local_tax_rate`, and `Local_gov_spending` all have similar correlations, which verifies the covariate reliance on government policy.
 
-# Create plot vs Mobility
-mobility_plot <- plot_scatter("Mobility", "tomato", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
-  ggtitle("Mobility vs Local Government Spending")
+From here, these 3 variables are used to examine the relations each has on demographic factors that directly affect an individual’s economic mobility position. The demographic variables examined were `Seg_poverty`, `Gini`, `Gini_99`, `Middle_class`, `Single_mothers`, and `Test scores`. These were all used as sample variable measures because, based on previous findings, these variables all affect mobility. The sample variables are then used to generate scatter plots (see **Appendix A** ) examining each specific predicting variable. A linear regression line and *R* and *p* values are displayed to elaborate on the linear trend lines.
 
-# Create plots for other variables 
-p1 <- plot_scatter("Seg_poverty", "tomato", r_p_size = 2)
-p2 <- plot_scatter("Gini", "tomato", r_p_size = 2)
-p3 <- plot_scatter("Gini_99", "tomato", r_p_size = 2)
-p4 <- plot_scatter("Middle_class", "tomato", r_p_size = 2)
-p5 <- plot_scatter("Single_mothers", "tomato", r_p_size = 2)
-p6 <- plot_scatter("Test_scores", "tomato", r_p_size = 2)
-
-# Display 
-print(mobility_plot)
-
-# Arrange and display all other plots on one page 
-grid.arrange(
-  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
-              top = textGrob("Demographic Variables vs Local Government Spending", 
-                             gp = gpar(fontsize = 10, fontface = "bold")))
-)
-
-```
-```{r}
-mobility[c("Local_tax_rate", "Local_gov_spending", "School_spending", "Mobility")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 3)),
-          columnLabels = c("Tax Rate", "Gov Spending", "School Spending", "Mobility"),
-          title = "Colinearity analysis of Government Policy",
-          progress = FALSE)
-```
-
-## 
-```{r}
-mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 5)),
-          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
-          title = "Colinearity analysis of segregation",
-          progress = FALSE)
-```
-
-
-While segregation on poverty lines is not particularly well correlated with segregation on racial lines, is is highly associated with segregation by affluence and segregation by income, which are also highly associated with each other. Since `Seg_poverty`, `Seg_affluence` and `Seg_income` are so strongly co-linear, `Seg_affluence` and `Seg_income` will be removed from the model. 
-
-#### Income and income inequality
+`School_spending` seemed to be the only variable that has a linear relationship with the sample variables. While `Local_tax_rate` and `Local_gov_spending` did have linear relationships with the demographic variables, they were on the whole weak. Further, histograms and scatter plots that examine the distribution of each variable and its individual relationship to `Mobility` were generated to determine if the predictors have an initial linear regression relationship with mobility.
 
 ```{r}
-mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 5)),
-          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
-          title = "Colinearity analysis of income and income inequality",
-          progress = FALSE)
+a <- ggplot(mobility, aes(x= School_spending)) + 
+  geom_histogram(bins = 30, fill = 'mediumseagreen', color = "black") + 
+  ggtitle("School Spending Distribution") +
+  xlab("School spending ($)") +
+  ylab("Frequency") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+b <- ggplot(mobility, aes(x = School_spending, y= Mobility)) + 
+  geom_point(color = "mediumseagreen", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=7.5, label.y=.3) +
+  ggtitle("School spending vs mobility") +
+  xlab("School spending ($)") + 
+  ylab("Mobility") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+c <- ggplot(mobility, aes(x= Local_tax_rate)) + 
+  geom_histogram(bins = 30, fill = 'dodgerblue', color = "black") + 
+  ggtitle("Local tax rate distribution") +
+  xlab("Local tax rate") +
+  ylab("Frequency")
+
+d <- ggplot(mobility, aes(x = Local_tax_rate, y= Mobility)) + 
+  geom_point(color = "dodgerblue", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=.04, label.y=.3) +
+  ggtitle("Local tax rate vs mobility") +
+  xlab("Local tax rate") + 
+  ylab("Mobility")
+
+e <- ggplot(mobility, aes(x= Local_gov_spending)) + 
+  geom_histogram(bins = 30, fill = 'tomato', color = "black") + 
+  ggtitle("Local government spending distribution") +
+  xlab("Local government spending ($)") +
+  ylab("Frequency") +
+  scale_x_continuous(labels = scales::dollar_format())
+
+f <- ggplot(mobility, aes(x = Local_gov_spending, y= Mobility)) + 
+  geom_point(color = "tomato", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=5000, label.y=.3) +
+  ggtitle("Local government spending vs mobility") +
+  xlab("Local government spending ($)") + 
+  ylab("Mobility") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+plot_row <- plot_grid(c,d,e,f,a,b, 
+                      align = "hv",
+                      nrow = 3, 
+                      ncol = 2)
+
+title <- ggdraw() + 
+  draw_label("Policy predictors of mobility",
+             fontface = 'bold',
+             x = 0,
+             hjust = 0) +
+  theme(plot.margin = margin(0, 0, 0, 7))
+
+plot_grid(title, 
+          plot_row,
+          ncol = 1,
+          rel_heights = c(0.1, 1))
 ```
 
+## Segregation factors
 
-The `Middle_class` variable is colinear with `Gini` and `Gini_99`, while the `Share01` variable is colinear with `Gini`. Additionally, `Gini` seems to be highly predictive of `Gini_99`. `Income` is not strongly associated with any of the other variables examined. 
+Covariate analysis of segregation factors (`Seg_racial`, `Seg_poverty`, `Seg_affluence` and `Seg_income`- see **Appendix B.4**) indicated that, while segregation on poverty lines is not particularly well correlated with segregation on racial lines, it is highly associated with segregation by affluence and segregation by income, which are also highly associated with each other. Since `Seg_poverty`, `Seg_affluence` and `Seg_income` are so strongly co-linear, `Seg_affluence` and `Seg_income` will be removed from the model. 
 
+Additionally, other income related factors that are generally associated with integration were examined (see **Appendix B.3**). The `Middle_class` variable is colinear with `Gini` and `Gini_99`, while the `Share01` variable is co-linear with `Gini`. Additionally, `Gini` seems to be highly predictive of `Gini_99`. `Income` is not strongly associated with any of the other variables examined. 
 
 ### Social determinants of mobility
 
@@ -479,3 +407,173 @@ d <- ggplot(data = mobility, aes(x = Mobility, y = Seg_poverty)) +
 plot_four(a,c,b,d, title = "Segregation as a predictor of mobility")
 ```
 
+
+# Appendices
+
+## Appendix A 
+
+```{r}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(mobility, aes(.data[[x_var]], School_spending)) +  
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  # Add linear regression line
+    stat_cor(label.x = min(mobility[[x_var]], na.rm = TRUE), 
+             label.y = max(mobility$School_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) +  # Adds R & p-values 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "mediumseagreen", r_p_size = 2)
+p2 <- plot_scatter("Gini", "mediumseagreen", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "mediumseagreen", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "mediumseagreen", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "mediumseagreen", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "mediumseagreen", r_p_size = 2)
+
+# Display all other plots on one page
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2, 
+              top = textGrob("Demographic Variables vs School Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+
+```{r, message=FALSE, warning=FALSE}
+data <- mobility
+
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_tax_rate)) + 
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]]), 
+             label.y = max(data$Local_tax_rate, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(), 
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "dodgerblue", r_p_size = 2)
+p2 <- plot_scatter("Gini", "dodgerblue", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "dodgerblue", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "dodgerblue", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "dodgerblue", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "dodgerblue", r_p_size = 2)
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Tax Rate", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_gov_spending)) +  
+    geom_point(color = color, alpha = .3, na.rm = TRUE) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]], na.rm = TRUE), 
+             label.y = max(data$Local_gov_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) +  
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10)  
+    )
+}
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "tomato", r_p_size = 2)
+p2 <- plot_scatter("Gini", "tomato", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "tomato", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "tomato", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "tomato", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "tomato", r_p_size = 2)
+
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Government Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+
+```
+
+## Appendix B - Colinearity Analysis
+
+```{r}
+# Make a heatmap
+corrplot(cor_matrix,
+         method = "color",  
+         tl.col = "black",  
+         tl.cex = 0.5, 
+         tl.srt = 45,
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200))
+```
+
+### 1 \t Education variables 
+
+```{r}
+cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
+corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200),
+         tl.cex = 0.6, 
+         number.cex = 0.8,
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 30)
+```
+
+### 2 \t Government policy variables
+
+```{r}
+mobility[c("Local_tax_rate", "Local_gov_spending", "School_spending", "Mobility")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 3)),
+          columnLabels = c("Tax Rate", "Gov Spending", "School Spending", "Mobility"),
+          title = "Colinearity analysis of Government Policy",
+          progress = FALSE)
+```
+
+### 3 \t Inequality variables
+
+```{r}
+mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
+          title = "Colinearity analysis of income and income inequality",
+          progress = FALSE)
+```
+
+### 4 \t Segregation variables
+
+```{r}
+mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
+          title = "Colinearity analysis of segregation",
+          progress = FALSE)
+```
