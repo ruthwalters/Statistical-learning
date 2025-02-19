@@ -1,5 +1,5 @@
 ---
-title: "Final Project"
+title: "Project 1"
 author: "Ruth Walters"
 date: "`r Sys.Date()`"
 output: pdf_document
@@ -30,6 +30,40 @@ theme_update(
 )
 ```
 
+```{r plotting functions}
+plot_four <- function(a, b, c, d, title) {
+  plot_row <- plot_grid(a,b,c,d, align = "hv")
+  
+  title <- ggdraw() + 
+    draw_label(title,
+               fontface = 'bold',
+               x = 0,
+               hjust = 0) +
+    theme(plot.margin = margin(0, 0, 0, 7))
+  
+  plot_grid(title, 
+            plot_row,
+            ncol = 1,
+            rel_heights = c(0.1, 1))
+}
+
+plot_two <- function(a, b, title) {
+  plot_row <- plot_grid(a,b, align = "hv")
+  
+  title <- ggdraw() + 
+    draw_label(title,
+               fontface = 'bold',
+               x = 0,
+               hjust = 0) +
+    theme(plot.margin = margin(0, 0, 0, 7))
+  
+  plot_grid(title, 
+            plot_row,
+            ncol = 1,
+            rel_heights = c(0.1, 1))
+}
+```
+
 # Introduction
 
 Economic mobility, or the ability of an individual to raise their economic status throughout their lifetime, is a marker of a healthy society. As economic mobility declines and income inequality rises throughout the United States, it is of increasing interest to determine which factors contribute to immobility. In this paper, we will investigate the correlation between economic, educational, and policy factors that contribute to economic mobility. We hypothesize that economic factors such as income inequality, will be most predictive of economic mobility.
@@ -41,20 +75,23 @@ Economic mobility, or the ability of an individual to raise their economic statu
 mobility <- read.csv("mobility-all.csv", 
                      header = TRUE, 
                      stringsAsFactors = TRUE)
-
-# Remove rows where a value for mobility is missing
-mobility <- mobility %>%
-  drop_na(Mobility) 
 ```
 
-## Education analysis
+```{r view NAs, echo=TRUE}
+# View NAs
+nas <- colSums(is.na(mobility))
+print(nas[nas > 0])
+```
 
-```{r}
+
+```{r clean data}
+# Remove rows where a value for mobility is missing
+mobilityTotalRows <- nrow(mobility)
+
+mobility <- mobility %>%
+  drop_na(Mobility) 
+
 # Segment education-related variables
-
-# edu_mobility <- mobility %>% 
-#   select(Mobility, School_spending, Student_teacher_ratio, Test_scores, HS_dropout, Colleges, Tuition, Graduation)
-
 edu_mobility <- mobility[,(names(mobility) %in% c("Mobility", 
                                                    "School_spending", 
                                                    "Student_teacher_ratio", 
@@ -66,125 +103,379 @@ edu_mobility <- mobility[,(names(mobility) %in% c("Mobility",
 
 # Drop NAs
 edu_mobility <- drop_na(edu_mobility)
-```
-
-```{r}
-# Plot tuition distribution
-p1 <- ggplot(edu_mobility, aes(x= Tuition)) + 
-  geom_histogram(bins = 30, fill = 'lightblue', color = 'black') + 
-  ggtitle("Tuition distribution") +
-  xlab("Tuition costs ($)") + 
-  ylab("Frequency") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-p2 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
-  geom_point(color = "lightblue") + 
-  ggtitle("Tuition vs mobility") +
-  xlab("Tuition costs ($)") +
-  ylab("Mobility") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-# p1 / p2
-
-# Plot school spending distributions
-p3 <- ggplot(edu_mobility, aes(x= School_spending)) + 
-  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
-  ggtitle("School Spending Distribution") +
-  xlab("School spending ($)") +
-  ylab("Frequency") + 
-  scale_x_continuous(labels = scales::dollar_format())
-
-p4 <- ggplot(edu_mobility, aes(x = School_spending, y= Mobility)) + 
-  geom_point(color = "lightblue")  + 
-  ggtitle("School Spending vs Mobility") +
-  xlab("School spending ($)") + 
-  ylab("Mobility") + 
-  scale_x_continuous(labels = scales::dollar_format())
-
-#(p1 + p3) / (p2 + p4)
-plot_grid(p1,p3,p2,p4, align = "hv")
-```
 
 
 
+# Remove qualitative variables
+quals <- c("ID","Name", "State", "Latitude", "Longitude")
+mobility <- mobility[,!(names(mobility) %in% quals)]
 
-
-```{r}
-# Plot student teach ratio distribution
-p1 <- ggplot(edu_mobility, aes(x= Student_teacher_ratio)) + 
-  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
-  ggtitle("Student Teacher Ratio Distribution") +
-  xlab("Student-teacher ratio") +
-  ylab("Frequency") 
-
-p2 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) + 
-  geom_point(color = "lightblue")  + 
-  ggtitle("Student Teacher Ratio vs Mobility") +
-  xlab("Student-teacher ratio") +
-  ylab("Mobility")
-
-#p1 / p2
-
-# Plot test score distribution
-p3 <- ggplot(edu_mobility, aes(x= Test_scores)) + 
-  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
-  ggtitle("Test Scores Distribution")+
-  xlab("Test scores") +
-  ylab("Frequency") 
-
-p4 <- ggplot(edu_mobility, aes(x = Test_scores, y= Mobility)) + 
-  geom_point(color = "lightblue")  + 
-  ggtitle("Test Scores vs Mobility")+
-  xlab("Test scores") +
-  ylab("Mobility")
-
-#(p1 + p3) / (p2 + p4)
-plot_grid(p1,p3,p2,p4, align = "hv")
-```
-
-
-
-
-
-```{r}
-p1 <- ggplot(edu_mobility, aes(x= HS_dropout)) + 
-  geom_histogram(bins = 30, fill = 'lightblue', color = "black") + 
-  ggtitle("HS Dropout Distribution") +
-  xlab("High school dropout rate") +
-  ylab("Frequency")
-
-p2 <- ggplot(edu_mobility, aes(x = HS_dropout, y= Mobility)) + 
-  geom_point(color = "lightblue")  + 
-  ggtitle("HS Dropout vs Mobility") + 
-  xlab("High school dropout rate") +
-  ylab("Mobility")
-
-#p1 / p2
-plot_grid(p1,p2, align = "hv")
-```
-
-```{r}
-cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
-corrplot(cor_matrix, 
-         method = "color",
-         type = "upper",
-         col = colorRampPalette(c("white", "lightblue", "royalblue3"))(200),
-         tl.cex = 0.6, 
-         number.cex = 0.8,
-         addCoef.col = "black",
-         tl.col = "black")
-```
-
-## 
-
-
-## 
-```{r}
 # Remove columns where more than 100 values are missing
 bad_cols <- c("Colleges","Tuition", "Graduation", "HS_dropout") # +100 NULL
 mobility <- mobility[,!(names(mobility) %in% bad_cols)]
 
 # Drop remaining NA variables
 mobility <- drop_na(mobility)
+
+```
+
+This dataset contains several rows for which one or more than one value is `NA`. Three steps were taken to eliminate `NA`s from the dataset while preserving its integrity.
+
+1. *Drop the 12 rows that do not contain a value for `Mobility`* | These rows are useless for linear analysis because they do not contain the variable we are attempting to predict.
+
+2. *Drop the features that contain a high incidence of `NA`s* | Any features that contained more than 100 NAs were designated as too poor in quality to be useful for the linear model. While some of these features were used for exploratory data analysis, they were removed from the dataset prior to modeling. 
+
+3. *Drop all remaining `NA` values* | After removing the most `NA` values, a small amount of rows with `NA`s remained. These rows were dropped. 
+
+
+Simply dropping all rows with `NA`s would have resulted in a reduction of `r (1 - (nrow(edu_mobility) / mobilityTotalRows)) * 100`% of the data whereas our three-step procedure only resulted in a reduction of `r (1 - (nrow(mobility) / mobilityTotalRows)) * 100`%.
+
+
+Additionally, qualitative (non-numeric and non-quantitative) variables such as those representing latitude and longitude, state/region names, and the ID tag, were removed. 
+
+## Education analysis
+
+```{r educational investment}
+# Plot student teacher ratio distribution
+p1 <- ggplot(edu_mobility, aes(x= Student_teacher_ratio)) + 
+  geom_histogram(bins = 30, fill = 'dodgerblue', color = "black") + 
+  ggtitle("Student Teacher Ratio Distribution") +
+  xlab("Student-teacher ratio") +
+  ylab("Frequency") 
+
+p2 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) + 
+  geom_point(color = "dodgerblue", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=18, label.y=.3) +
+  ggtitle("Student Teacher Ratio vs Mobility") +
+  xlab("Student-teacher ratio") +
+  ylab("Mobility")
+
+# Plot school spending distributions
+p3 <- ggplot(edu_mobility, aes(x= School_spending)) + 
+  geom_histogram(bins = 30, fill = 'tomato', color = "black") + 
+  ggtitle("School Spending Distribution") +
+  xlab("School spending ($)") +
+  ylab("Frequency") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+p4 <- ggplot(edu_mobility, aes(x = School_spending, y= Mobility)) + 
+  geom_point(color = "tomato", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=7, label.y=.3) +
+  ggtitle("School Spending vs Mobility") +
+  xlab("School spending ($)") + 
+  ylab("Mobility") + 
+  scale_x_continuous(labels = scales::dollar_format())
+
+#(p1 + p3) / (p2 + p4)
+plot_four(p1,p3,p2,p4, title = "Educational investment as a predictor of economic mobility")
+```
+
+
+
+```{r educational outcomes}
+# Plot dropout rates distribution
+p1 <- ggplot(edu_mobility, aes(x= HS_dropout)) + 
+  geom_histogram(bins = 30, fill = 'dodgerblue', color = "black") + 
+  ggtitle("HS Dropout Distribution") +
+  xlab("High school dropout rate") +
+  ylab("Frequency")
+
+p2 <- ggplot(edu_mobility, aes(x = HS_dropout, y= Mobility)) + 
+  geom_point(color = "dodgerblue", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=.025, label.y=.3) +
+  ggtitle("HS Dropout vs Mobility") + 
+  xlab("High school dropout rate") +
+  ylab("Mobility")
+
+# Plot test score distribution
+p3 <- ggplot(edu_mobility, aes(x= Test_scores)) + 
+  geom_histogram(bins = 30, fill = 'tomato', color = "black") + 
+  ggtitle("Test Scores Distribution")+
+  xlab("Test scores") +
+  ylab("Frequency") 
+
+p4 <- ggplot(edu_mobility, aes(x = Test_scores, y= Mobility)) + 
+  geom_point(color = "tomato", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=-20, label.y=.3) +
+  ggtitle("Test Scores vs Mobility")+
+  xlab("Test scores") +
+  ylab("Mobility")
+
+plot_four(p1,p3,p2,p4, title = "Educational outcomes as a predictor of economic mobility")
+```
+
+
+
+```{r tuition}
+# Plot tuition distribution
+p1 <- ggplot(edu_mobility, aes(x= Tuition)) + 
+  geom_histogram(bins = 30, fill = 'dodgerblue', color = 'black') + 
+  ggtitle("Tuition distribution") +
+  xlab("Tuition costs ($)") + 
+  ylab("Frequency") +
+  scale_x_continuous(labels = scales::dollar_format())
+
+p2 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
+  geom_point(color = "dodgerblue", alpha = .3) + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=11000, label.y=.3) +
+  ggtitle("Tuition vs mobility") +
+  xlab("Tuition costs ($)") +
+  ylab("Mobility") +
+  scale_x_continuous(labels = scales::dollar_format())
+
+plot_two(p1, p2, title = "Tuition costs as a predictor of economic mobility")
+```
+
+```{r education corrplot}
+cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
+corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200),
+         tl.cex = 0.6, 
+         number.cex = 0.8,
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 30)
+```
+
+## Policy variables
+
+```{r}
+# Make a correlation matrix
+cor_matrix <- cor(mobility, use = "pairwise.complete.obs")
+
+# Make a heatmap
+corrplot(cor_matrix,
+         method = "color",  
+         tl.col = "black",  
+         tl.cex = 0.5, 
+         tl.srt = 45,
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200))       
+
+# Pass the correlation matrix to a dataframe
+cor_df <- as.data.frame(as.table(cor_matrix))
+```
+
+```{r}
+# Remove diagonal correlations
+cor_df <- cor_df %>%
+  filter(Var1 != Var2)
+
+# Standardize Var1 & Var2
+cor_df <- cor_df %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(pair = paste(sort(c(Var1, Var2)), collapse = "_")) %>%
+  dplyr::distinct(pair, .keep_all = TRUE) %>%
+  dplyr::select(-pair)
+
+# Sort by correlation
+top_corr <- cor_df %>%
+  arrange(desc(abs(Freq))) %>%  
+  head(50)  
+
+# Print strongest correlations
+print(head(top_corr))
+```
+```{r}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(mobility, aes(.data[[x_var]], School_spending)) +  
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  # Add linear regression line
+    stat_cor(label.x = min(mobility[[x_var]], na.rm = TRUE), 
+             label.y = max(mobility$School_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) +  # Adds R & p-values 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plot vs mobility
+mobility_plot <- plot_scatter("Mobility", "mediumseagreen", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs School Spending")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "mediumseagreen", r_p_size = 2)
+p2 <- plot_scatter("Gini", "mediumseagreen", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "mediumseagreen", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "mediumseagreen", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "mediumseagreen", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "mediumseagreen", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Display all other plots on one page
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2, 
+              top = textGrob("Demographic Variables vs School Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+```{r, message=FALSE, warning=FALSE}
+data <- mobility
+
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_tax_rate)) + 
+    geom_point(color = color, alpha = .3) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]]), 
+             label.y = max(data$Local_tax_rate, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) + 
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(), 
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10) 
+    )
+}
+
+# Create plot vs Mobility
+mobility_plot <- plot_scatter("Mobility", "dodgerblue", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs Local Tax Rate")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "dodgerblue", r_p_size = 2)
+p2 <- plot_scatter("Gini", "dodgerblue", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "dodgerblue", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "dodgerblue", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "dodgerblue", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "dodgerblue", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Tax Rate", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Create scatter plots
+plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
+  ggplot(data, aes(.data[[x_var]], Local_gov_spending)) +  
+    geom_point(color = color, alpha = .3, na.rm = TRUE) + 
+    geom_smooth(method = "lm", color = "black", se = FALSE) +  
+    stat_cor(label.x = min(data[[x_var]], na.rm = TRUE), 
+             label.y = max(data$Local_gov_spending, na.rm = TRUE) * 0.9, 
+             size = r_p_size) + 
+    ggtitle(paste(x_var)) +  
+    theme_minimal() +
+    theme(
+      axis.title = if (keep_axis_titles) element_text(size = 10) else element_blank(),  
+      axis.text = element_text(size = 8),  
+      plot.title = element_text(hjust = 0.5, size = 10)  
+    )
+}
+
+# Create plot vs Mobility
+mobility_plot <- plot_scatter("Mobility", "tomato", text_size = 5, r_p_size = 6, keep_axis_titles = TRUE) +
+  ggtitle("Mobility vs Local Government Spending")
+
+# Create plots for other variables 
+p1 <- plot_scatter("Seg_poverty", "tomato", r_p_size = 2)
+p2 <- plot_scatter("Gini", "tomato", r_p_size = 2)
+p3 <- plot_scatter("Gini_99", "tomato", r_p_size = 2)
+p4 <- plot_scatter("Middle_class", "tomato", r_p_size = 2)
+p5 <- plot_scatter("Single_mothers", "tomato", r_p_size = 2)
+p6 <- plot_scatter("Test_scores", "tomato", r_p_size = 2)
+
+# Display 
+print(mobility_plot)
+
+# Arrange and display all other plots on one page 
+grid.arrange(
+  arrangeGrob(p1, p2, p3, p4, p5, p6, ncol = 2,  
+              top = textGrob("Demographic Variables vs Local Government Spending", 
+                             gp = gpar(fontsize = 10, fontface = "bold")))
+)
+
+```
+```{r}
+mobility[c("Local_tax_rate", "Local_gov_spending", "School_spending", "Mobility")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 3)),
+          columnLabels = c("Tax Rate", "Gov Spending", "School Spending", "Mobility"),
+          title = "Colinearity analysis of Government Policy",
+          progress = FALSE)
+```
+
+## 
+```{r}
+mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
+          title = "Colinearity analysis of segregation",
+          progress = FALSE)
+```
+
+
+While segregation on poverty lines is not particularly well correlated with segregation on racial lines, is is highly associated with segregation by affluence and segregation by income, which are also highly associated with each other. Since `Seg_poverty`, `Seg_affluence` and `Seg_income` are so strongly co-linear, `Seg_affluence` and `Seg_income` will be removed from the model. 
+
+#### Income and income inequality
+
+```{r}
+mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
+          title = "Colinearity analysis of income and income inequality",
+          progress = FALSE)
+```
+
+
+The `Middle_class` variable is colinear with `Gini` and `Gini_99`, while the `Share01` variable is colinear with `Gini`. Additionally, `Gini` seems to be highly predictive of `Gini_99`. `Income` is not strongly associated with any of the other variables examined. 
+
+
+### Social determinants of mobility
+
+```{r warning=FALSE}
+a <- ggplot(mobility, aes(x= Seg_racial)) + 
+  geom_histogram(bins = 30, fill = 'dodgerblue', color = "gray30") + 
+  ggtitle("Distribution of segregation by race")+
+  xlab("Segregation by race") +
+  ylab("Frequency")
+
+b <- ggplot(data = mobility, aes(x = Mobility, y = Seg_racial)) + 
+  geom_point(color = "dodgerblue", alpha = .3) + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=.17, label.y=.5) +
+  ylim(0,.6) + 
+  ggtitle("Segregation by race vs mobility") +
+  xlab("Mobility") + 
+  ylab("Racial segregation")
+
+c <- ggplot(mobility, aes(x= Seg_poverty)) + 
+  geom_histogram(bins = 30, fill = 'tomato', color = "gray30") + 
+  ggtitle("Distribution of segregation by poverty")+
+  xlab("Segregation by poverty") +
+  ylab("Frequency") 
+
+d <- ggplot(data = mobility, aes(x = Mobility, y = Seg_poverty)) + 
+  geom_point(color = "tomato", alpha = .3) +
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=.17, label.y=.15) +
+  ylim(0,.17) +
+  ggtitle("Segregation by poverty v mobility") + 
+  xlab("Mobility") + 
+  ylab("Poverty segregation")
+
+plot_four(a,c,b,d, title = "Segregation as a predictor of mobility")
 ```
 
