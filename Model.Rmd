@@ -1,20 +1,15 @@
 ---
-title: "Model"
-output: html_document
+title: "Michael Purtle Model Stuff"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
 ---
-
-#To do:
-
-check condictions
-and make initial model
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-install.packages("betareg")
 ```
 
-
-get packages. 
 ```{r}
 library(tidyverse)
 library(caTools)
@@ -28,13 +23,31 @@ library(betareg )
 set.seed(123)
 ```
 
+#Exploring Key Perdictors in Mobility
 
+In our analysis of the factors associated with mobility, we employed both exploratory data analysis (EDA) and
+a multiple linear regression model, and a beta regression model to determine which variables exhibit a strong relationship with our outcome measure. Based on the regression output and correlation values from our EDA, we identified a subset of variables that appear particularly influential in explaining mobility.
 ```{r}
 plot(lm.1)
+summary(lm.1)
 ```
 
+Taking into account the exploratory data analysis and the linear model from above, we now have a list of possible predictors that we can use.
+ 1. Educational Spending
+    + Scool Spending: Higher per-pupil expenditures can signal greater investment in educational resources, facilities, and student  support programs, thereby fostering improved long-term mobility outcomes.
+    + Test Scores:  These serve as a proxy for overall educational quality and student achievement, and they often correlate positively with economic and social mobility.
+    + Colleges: The presence and density of colleges in an area can enhance the availability of higher education and skill development opportunities, contributing to upward mobility.
+  2. Social and Demographic Factors
+    + Black & Seg_racial: The proportion of Black residents and the degree of racial segregation in a community are crucial indicators, reflecting underlying social structures and potential barriers or pathways to mobility. Areas with higher racial segregation often experience limited socioeconomic opportunities.
+    + Commute: Longer or more prevalent commutes could signal broader labor markets or suburban sprawl. Where commutes are feasible, individuals may have access to a wider range of job opportunities.
+    + Gini: Income inequality is often inversely related to mobility; higher inequality can concentrate disadvantage and limit pathways for advancement.
+    + Middle_class & Progressivity: Communities with a robust middle class or more progressive tax structures may provide support systems (e.g., social services, quality infrastructure) that encourage upward mobility.
+    + Manufacturing: A heavy reliance on manufacturing might limit economic diversification; in many cases, deindustrialization or technological shifts in manufacturing can hinder long-term mobility prospects.
+    + Migration_in: Areas experiencing inbound migration may be more economically dynamic, suggesting better job prospects and growth, which in turn can improve mobility opportunities.
+    + Religious: Higher religiosity can be associated with stronger community networks or social support, potentially facilitating resource sharing and stability that foster mobility.
+    + Violent_crime: High crime rates often correspond to reduced social cohesion and economic investment, negatively affecting people’s prospects for advancement.
+    + Single_mothers & Divorced: Family structure measures can indicate economic vulnerability or instability, impacting children’s outcomes and the intergenerational transmission of opportunity.
 
-need to get the high correlated values for each eda then we can do from there
 ```{r}
 edu_corval <- c("School_spending", "Test_scores", "Colleges") #for edu stuff
 social_cor <- c("Black", "Seg_racial", "Commute", "Gini", "Middle_class", 
@@ -45,22 +58,27 @@ high_cor <- mobility[, names(mobility) %in% c("Mobility",edu_corval, social_cor)
 
 ```
 
+From a methodological standpoint, these variables as signigicant predictors in our regression and/or showed string correlation in EDA phase. To refine this model, we plan to:
+
+* Check for Multicollinearity using Variance Inflation Factors (VIFs) to ensure no subset of variables is overly redundant.
+* Check for Heteroskedasticity see if any of the variable have varying variance
+* How influential are outliners in the model and see if we need to remove them
+(More here no?)
+
 ```{r}
 yikes <- lm(Mobility ~ ., data = high_cor)
 
 plot(yikes)
 ```
-get vif score for colinearity.
+We fitted the model, now let look for co-linearity between the variables then we can decide on how to deal with them. 
 ```{r}
 vif(yikes)
 ```
-nothing moajor above but may need to reasses if not good enough 
-Do something call robust standard errors test that I found out to deal with that shit
+Since the above facotrs are around 1-3, which suggest that col-linearity isn't a huge concern. The highest VIF score is the "Middle_class" (about 4.91), which is borderline but still not extremely high. It's something to keep an eye on, but not a immediate concern.
 ```{r}
 coeftest(yikes, vcov = vcovHC(yikes, type = "HC3"))
 ```
-
-refitting after all this shit.
+The above result is a summary of each predictors estimated coefficient, its standard error, the t-statistic (coefficient / standard error), and the associated p-value. In short, there are variables like Black, Seg_Racial, Middle_class, Progressivity, Manufacturing, Religious, and Divorced show significant relationships while some of the others do not reach conventional significance thresholds. And we in fact use the more significant variables when choosing our next model below.
 ```{r}
 yikes_refit <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor)
 coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
@@ -69,30 +87,41 @@ coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
 ```{r}
 summary(yikes_refit)
 ```
-
+Having refined our model to include only statistically significant variables, we can now delve deeper into the data by identifying influential observations. The Q-Q plot below helps us pinpoint these observations, highlighting points that deviate from the expected distribution. These deviations may indicate outliers or data points that have a disproportionate impact on the model's performance, warranting further investigation.
 ```{r}
 plot(yikes_refit )
 ```
 
+After examining the diagnostic plots (Residuals vs. Fitted, Q-Q Plot, Scale-Location, and Residuals vs. Leverage), we identified observations 320, 325, 326, and others as potential outliers or influential points. These points appeared to deviate substantially from the overall trend, suggesting they might exert an undue influence on the regression results.
+
+Why Remove Outliers?
+
+1. Influence on Parameter Estimates: 
+  + Outliers can disproportionately affect the estimated coefficients, leading to skewed interpretations.
+2. Violation of Model Assumptions: 
+  + If extreme points violate assumptions of normality or homoscedasticity, they can compromise the validity of the model’s inferences.
+3. Model Fit: 
+  + Removing influential points may improve the model fit and reveal a clearer relationship among the remaining data.
+
+Now er just have to remove the outliers and refit the model.
 
 ```{r}
-high_cor_clean <- high_cor[-c(320, 325, 326), ]
+high_cor_clean <- high_cor[-c(320, 325, 326, 385, 391, 393), ]
 yikes_clean <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor_clean)
 summary(yikes_clean)
 plot(yikes_clean)
 ```
 
 
-Since what we are doing to trying to perdict a probability we need to do something the regresses off of a probability because DUH!! Kinda makes since right? Wish we learned more models instead of getting hit with some meaningless thoery that he said he would hide but does it anyway because he likes it. LIKE THE THOERY IS NOT EASY FOR UNDERGRADS..... But what do I know.... I just work here. never looked to see if it followed a beta distribution...
+This is likely the best we can achieve using a simple linear regression model, given that we’re attempting to predict a probability (mobility). Because probabilities are bounded between 0 and 1, linear regression can struggle to provide accurate predictions or valid inferences in this context. As a result, we may need a more advanced modeling technique—such as logistic regression or another specialized method—to capture the probabilistic nature of mobility. This modeling mismatch is probably why we’ve encountered multiple issues when trying to predict mobility with a simple linear approach.
 
-
-Does this look like a beta distribution
+For the next model, I plan to use beta regression because it is specifically designed for response variables that lie between 0 and 1. This approach assumes the response follows a beta distribution, making it well-suited for modeling probabilities or other bounded outcomes. But first we need to see of mobility displays a beta distribution.
 ```{r}
 
 hist(high_cor$Mobility, breaks = 30, probability = TRUE, main = "Histogram of Mobility", col = "lightblue")
 
 ```
-Above not conclusive numeric test is needed
+The histogram above does not provide sufficient evidence that mobility follows a beta distribution. Consequently, we will use the Kolmogorov-Smirnov (K-S) test next. Essentially, the K-S test asks: ‘How likely is it that we would observe these two samples if they were drawn from the same probability distribution?’
 ```{r}
 library(MASS)
 
@@ -110,9 +139,18 @@ lines(x_vals, beta_vals, col = "red", lwd = 2)
 ks.test(high_cor$Mobility, "pbeta", mobility_fit$estimate[1], mobility_fit$estimate[2])
 
 ```
-p value > 0.05 so it is a beta distribution. shocking, now we can use beta regression.
+The p-value from the one-sample Kolmogorov-Smirnov test is 0.05856, which is slightly above the conventional 0.05 threshold. This suggests that we do not have strong evidence to reject the null hypothesis that our data follow a beta distribution. However, before proceeding with beta regression, we need to verify that all values of our response variable lie strictly within the (0, 1) interval—a key assumption for beta regression.
+
+We can confirm this in R with the following code:
 
 
+```{r}
+all(high_cor$Mobility > 0 & high_cor$Mobility < 1)
+```
+
+If this returns TRUE, it confirms that all values meet the (0, 1) requirement, and we can confidently move forward with the beta regression analysis.
+
+Beta regression:
 ```{r}
 yikes_beta <- betareg(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced, 
                       data = high_cor)
@@ -120,13 +158,57 @@ summary(yikes_beta)
 plot(yikes_beta)
 ```
 
-comparing models... Seeing if black varies on middle class.
+Overall, the beta regression model appears to be performing well based on several diagnostic indicators. First, the significance of the predictors in the mean model is high, with all coefficients (except Migration_in, which is still below the 0.05 threshold) showing very low p-values. This suggests that each variable contributes meaningfully to explaining the variability in Mobility. Furthermore, the pseudo R-squared value of approximately 0.75 indicates that the model accounts for a substantial portion of the variation in the data—quite high for a beta regression.
+
+Looking at the diagnostic plots, the residuals versus observation indices and the residuals versus the linear predictor do not exhibit strong patterns, suggesting no obvious violations of model assumptions. The Cook’s distance plot reveals that no single observation exerts undue influence on the model, and generalized leverage values are mostly low, indicating limited leverage points. Lastly, the estimated precision (phi ≈ 150) is relatively large, pointing to a tightly clustered distribution around the fitted values. Taken together, these diagnostics imply that the beta regression model is a good fit, although you may want to confirm its predictive performance through additional fit metrics or cross-validation.
+
+
 ```{r}
-yikes_interact <- betareg(Mobility ~ Black * Middle_class + Seg_racial + Progressivity + Manufacturing + Migration_in + Religious + Divorced, data = high_cor)
-summary(yikes_interact)
-plot(yikes_interact)
+model_aic <- AIC(yikes_beta)
+model_bic <- BIC(yikes_beta)
+
+cat("AIC:", model_aic, "\n")
+cat("BIC:", model_bic, "\n")
+
+set.seed(123)
+
+n_folds <- 5
+
+
+folds <- sample(1:n_folds, size = nrow(high_cor), replace = TRUE)
+
+
+rmse_vals <- numeric(n_folds)
+
+for (k in 1:n_folds) {
+  
+
+  train_idx <- which(folds != k)
+  test_idx  <- which(folds == k)
+  
+
+  fit_k <- betareg(
+    Mobility ~ Black + Seg_racial + Middle_class + Progressivity + 
+      Manufacturing + Migration_in + Religious + Divorced,
+    data = high_cor[train_idx, ]
+  )
+  
+
+  preds <- predict(fit_k, newdata = high_cor[test_idx, ], type = "response")
+  actuals <- high_cor$Mobility[test_idx]
+  
+
+  rmse_vals[k] <- sqrt(mean((preds - actuals)^2))
+}
+
+
+mean_rmse <- mean(rmse_vals)
+
+cat("Mean RMSE (5-fold CV):", mean_rmse, "\n")
 ```
 
+The model's fit is strong, as indicated by the AIC (-2960.113) and BIC (-2915.608), which suggest excellent in-sample fit, with lower values signifying a better model. The mean RMSE from the 5-fold cross-validation is 0.0276, meaning that, on average, the model's predictions are off by just 2.8 percentage points—indicating good predictive accuracy. Overall, these results suggest that your beta regression model is well-calibrated, performing well both in terms of fit and prediction. However, comparing these metrics across different models can provide additional insights into the relative performance. for 10 seconds
+The negative AIC and BIC values indicate that the model has a high likelihood relative to its complexity, though these measures are most informative when comparing across multiple models. Meanwhile, the mean RMSE of approximately 0.028 suggests that, on average, the model’s predictions deviate from the actual values by about 2.8 percentage points on the 0–1 scale, which is fairly small. Taken together, these results suggest that the beta regression model fits the data well, although further comparisons with alternative models or additional diagnostics would provide a more comprehensive assessment.
 
 
 
