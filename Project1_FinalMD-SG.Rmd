@@ -1,0 +1,124 @@
+---
+title: "SG_Project1"
+author: "Sidney Gehring"
+date: "2025-02-05"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Import dependencies
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(tidyr)
+library(patchwork)
+
+theme_set(theme_bw())
+
+# Import data
+data <- read.csv("mobility-all.csv", header = TRUE)
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+str(data)
+```
+
+
+```{r}
+new_data <- data %>% select(Mobility, School_spending, Student_teacher_ratio, Test_scores, HS_dropout, Colleges, Tuition, Graduation)
+
+missing_values <- colSums(is.na(new_data))
+print(missing_values)
+
+```
+```{r}
+mobility_data <- new_data %>% drop_na()
+colSums(is.na(mobility_data))
+```
+
+```{r}
+glimpse(mobility_data)
+```
+
+```{r}
+p1 <- ggplot(mobility_data, aes(x= Tuition)) + geom_histogram(bins = 30, fill = 'lightblue', color = 'black') + ggtitle("Tuition Distribution")
+
+p2 <- ggplot(data, aes(x = Tuition, y= Mobility)) + geom_point(color = "lightblue") + ggtitle("Tuition vs Mobility")
+
+p1 / p2
+```
+
+
+
+```{r}
+p1 <- ggplot(mobility_data, aes(x= School_spending)) + geom_histogram(bins = 30, fill = 'lightblue', color = "black") + ggtitle("School Spending Distribution")
+
+p2 <- ggplot(data, aes(x = School_spending, y= Mobility)) + geom_point(color = "lightblue")  + ggtitle("School Spending vs Mobility")
+
+p1 / p2
+
+```
+```{r}
+p1 <- ggplot(mobility_data, aes(x= Student_teacher_ratio)) + geom_histogram(bins = 30, fill = 'lightblue', color = "black") + ggtitle("Student Teacher Ratio Distribution")
+
+p2 <- ggplot(data, aes(x = Student_teacher_ratio, y= Mobility)) + geom_point(color = "lightblue")  + ggtitle("Student Teacher Ratio vs Mobility")
+
+p1 / p2
+
+```
+```{r}
+p1 <- ggplot(mobility_data, aes(x= Test_scores)) + geom_histogram(bins = 30, fill = 'lightblue', color = "black") + ggtitle("Test Scores Distribution")
+
+p2 <- ggplot(data, aes(x = Test_scores, y= Mobility)) + geom_point(color = "lightblue")  + ggtitle("Test Scores vs Mobility")
+
+p1 / p2
+
+```
+
+```{r}
+p1 <- ggplot(mobility_data, aes(x= HS_dropout)) + geom_histogram(bins = 30, fill = 'lightblue', color = "black") + ggtitle("HS Dropout Distribution")
+
+p2 <- ggplot(data, aes(x = HS_dropout, y= Mobility)) + geom_point(color = "lightblue")  + ggtitle("HS Dropout vs Mobility")
+
+p1 / p2
+```
+
+```{r}
+cat("The tuition mean is", mean(mobility_data$Tuition, na.rm = TRUE), "\n")
+cat("The tuition sd is", sd(mobility_data$Tuition, na.rm = TRUE), "\n")
+
+cat("The school spending mean is", mean(mobility_data$School_spending, na.rm = TRUE), "\n")
+cat("The school spending sd is", sd(mobility_data$School_spending, na.rm = TRUE), "\n")
+
+cat("The teacher student ratio mean is", mean(mobility_data$Student_teacher_ratio, na.rm = TRUE), "\n")
+cat("The teacher student sd is", sd(mobility_data$Student_teacher_ratio, na.rm = TRUE), "\n")
+
+cat("The test score mean is", mean(mobility_data$Test_scores, na.rm = TRUE), "\n")
+cat("The test score sd is", sd(mobility_data$Test_scores, na.rm = TRUE), "\n")
+
+cat("The hs dropout mean is", mean(mobility_data$HS_dropout, na.rm = TRUE), "\n")
+cat("The hs dropout sd is", sd(mobility_data$HS_dropout, na.rm = TRUE), "\n")
+
+```
+```{r}
+cor_matrix <- cor(mobility_data, use = "pairwise.complete.obs") 
+corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         col = colorRampPalette(c("white", "lightblue", "blue"))(200),
+         tl.cex = 0.6, 
+         number.cex = 0.8,
+         addCoef.col = "black",
+         tl.col = "black")
+```
+
