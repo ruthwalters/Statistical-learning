@@ -1,8 +1,10 @@
 ---
 title: "Project 1"
-author: "Ruth Walters"
+author: "William Buckey, Sidney Gehring, Micheal Purtle, Ruth Walters"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -72,9 +74,11 @@ plot_two <- function(a, b, title) {
 
 # Introduction
 
-Economic mobility, or the ability of an individual to raise their economic status throughout their lifetime, is a marker of a healthy society. As economic mobility declines and income inequality rises throughout the United States, it is of increasing interest to determine which factors contribute to immobility. In this paper, we will investigate the correlation between economic, educational, and policy factors that contribute to economic mobility. We hypothesize that economic factors such as income inequality, will be most predictive of economic mobility.
+Economic mobility, or the ability of an individual to raise their economic status throughout their lifetime, is a marker of a healthy society. As economic mobility declines and income inequality rises throughout the United States, it is of increasing interest to determine which factors contribute to immobility. In this paper, we will investigate the correlation between economic, educational, and policy factors that contribute to economic mobility. We hypothesize that economic factors such as income inequality, will be most predictive of economic mobility, with higher levels of income disparity correlating with lower upward mobility.
 
 # Exploratory data analysis
+
+## Data cleaning and variable selection
 
 ```{r}
 # Read in the mobility dataframe
@@ -83,7 +87,7 @@ mobility <- read.csv("mobility-all.csv",
                      stringsAsFactors = TRUE)
 ```
 
-```{r view NAs, echo=TRUE}
+```{r view NAs}
 # View NAs
 nas <- colSums(is.na(mobility))
 print(nas[nas > 0])
@@ -141,47 +145,9 @@ Additionally, qualitative (non-numeric and non-quantitative) variables such as t
 
 ## Education analysis
 
-```{r educational investment}
-# Plot student teacher ratio distribution
-p1 <- ggplot(edu_mobility, aes(x= Student_teacher_ratio)) + 
-  geom_histogram(bins = 30, fill = 'dodgerblue', color = "black") + 
-  ggtitle("Student Teacher Ratio Distribution") +
-  xlab("Student-teacher ratio") +
-  ylab("Frequency") 
+One of the principal research questions concerns whether better education can predict higher levels of economic mobility. The selected educational variables include School_spending (which is also discussed as a policy variable), Student-teacher_ratio, Test_scores, HS_dropout, Colleges, Tuition, and Graduation. These variables represent key aspects of the education system, including funding, resource allocation, academic performance, and attainment levels, and are critical in assessing educational impact. Since many of the features with the most missing values were related to education, a new data set was created of just the educational factors where all rows with NA values were dropped. 
 
-p2 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) + 
-  geom_point(color = "dodgerblue", alpha = .3)  + 
-  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
-  stat_cor(label.x=18, label.y=.3) +
-  ggtitle("Student Teacher Ratio vs Mobility") +
-  xlab("Student-teacher ratio") +
-  ylab("Mobility")
-
-# Plot tuition distribution
-p3 <- ggplot(edu_mobility, aes(x= Tuition)) + 
-  geom_histogram(bins = 30, fill = 'tomato', color = 'black') + 
-  ggtitle("Tuition distribution") +
-  xlab("Tuition costs ($)") + 
-  ylab("Frequency") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-p4 <- ggplot(edu_mobility, aes(x = Tuition, y= Mobility)) + 
-  geom_point(color = "tomato", alpha = .3) + 
-  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
-  stat_cor(label.x=11000, label.y=.3) +
-  ggtitle("Tuition vs mobility") +
-  xlab("Tuition costs ($)") +
-  ylab("Mobility") +
-  scale_x_continuous(labels = scales::dollar_format())
-
-
-#(p1 + p3) / (p2 + p4)
-plot_four(p1,p2,p3,p4, title = "Educational investment as a predictor of economic mobility")
-```
-
-
-
-```{r educational outcomes}
+```{r education analysis}
 # Plot dropout rates distribution
 p1 <- ggplot(edu_mobility, aes(x= HS_dropout)) + 
   geom_histogram(bins = 30, fill = 'dodgerblue', color = "black") + 
@@ -212,24 +178,55 @@ p4 <- ggplot(edu_mobility, aes(x = Test_scores, y= Mobility)) +
   xlab("Test scores") +
   ylab("Mobility")
 
+# Plot student teacher ratio distribution
+p5 <- ggplot(edu_mobility, aes(x= Student_teacher_ratio)) + 
+  geom_histogram(bins = 30, fill = 'mediumseagreen', color = "black") + 
+  ggtitle("Student Teacher Ratio Distribution") +
+  xlab("Student-teacher ratio") +
+  ylab("Frequency") 
 
-plot_four(p1,p2,p3,p4, title = "Educational outcomes as a predictor of economic mobility")
+p6 <- ggplot(edu_mobility, aes(x = Student_teacher_ratio, y= Mobility)) + 
+  geom_point(color = "mediumseagreen", alpha = .3)  + 
+  stat_smooth(method = "lm", formula = y ~ x, geom = "line", color = "black", se = FALSE) +
+  stat_cor(label.x=18, label.y=.3) +
+  ggtitle("Student Teacher Ratio vs Mobility") +
+  xlab("Student-teacher ratio") +
+  ylab("Mobility")
+
+plot_row <- plot_grid(p1,p2,p3,p4,p5,p6,
+                      align = "hv",
+                      nrow = 3, 
+                      ncol = 2)
+
+title <- ggdraw() + 
+  draw_label("Educational predictors of mobility",
+             fontface = 'bold',
+             x = 0,
+             hjust = 0) +
+  theme(plot.margin = margin(0, 0, 0, 7))
+
+plot_grid(title, 
+          plot_row,
+          ncol = 1,
+          rel_heights = c(0.1, 1))
 ```
+The initial step involved creating a correlation plot using pairwise relationships between social variables (see Appendix A.1). This analysis identified the top two predictive variables: test_scores, with a correlation of 0.54, and HS_dropout, with a correlation of -0.44. Student_teacher_ratio and colleges exhibited some correlation with mobility, whereas Tuition and Graduation showed little to no correlation.
 
-## Policy variables
+To further analyze the most strongly correlated variable, the distribution of test_scores was examined. The data followed a bell curve with a slight left skew. A scatter plot of mobility and Test_scores revealed a positive linear relationship with some variation. To quantify this variation, the standard deviation was calculated as 7.43, aligning with the observed distribution. A similar analysis was conducted for HS_dropout. The distribution displayed a right skew, and the scatter plot indicated a negative linear relationship, consistent with the correlation value.
 
-When examining the mobility dataset, there seemed to be 2 main features that are directly impacted by government policies:
+## Policy analysis
 
-1. *Local tax rate* | Fraction of all income going to local taxes
-2. *School expenditures* | Average spending per pupil in public schools
-3. *Local government spending* | Local government spending per capita
+By a similar procedure as above, three highly correlated variables related to government policy were identified:
 
-Out of all the variables in the mobility dataset, the local tax rate and school expenditure are the most directly affected by government policy; that is, local tax rate and school spending are dependent on how the government chooses to raise and spend funds.
+1.	Local tax rate | Fraction of all income going to local taxes
+2.	School expenditures | Average spending per pupil in public schools
+3.	Local government spending | Local government spending per capita
 
-While `Chinese_imports` and `Manufacturing` were taken into consideration as policy-based predictors, both features were deemed to stem more from business practices that government policy. Chinese imports are impacted by US foreign policy, however, it would be difficult to untangle the competing market and regulatory factors,so it is difficult to say that these variables are linked to US government policy.
+Further, while there were other variables such as Chinese_imports and Manufacturing that were considered inclusion in this category, both features were deemed to stem both from business practices and general economic state along with government policy, complicating analysis. On the other hand, variables like local tax rate and school spending are dependent on how the government chooses to raise and spend funds.
 
-After examining the dataset to verify that `School_spending` and `Local_tax_rate` were valid, there was found to be very little missing values for these variables. In fact, it’s less than mobility! This gives assurance that these two variables are valid enough within the dataset to be used as predicting variables.
+Government policy is first examined by identifying the relationship between the three variables that are selected as predictors and verifying that these variables have a positive correlation between themselves. To verify these relations, a correlation matrix was created using pairwise relations (see Appendix A.2). We highlight the policy-associated variables and display the top 5 variables that are correlated with each (also Appendix A.2).
 
+School_spending, Local_tax_rate, and Local_gov_spending all have a similar steady correlation with each other, verifying the covariant reliance on government policy. The sample variables are then used to generate a relationship scatter plot between each specific predicting variable using scatterplots. A linear regression line and R & p values are displayed to examine any trend lines. Further analysis of the relationship between school spending, local tax rates, and local government spending and demographic factors like income inequality can be found in Appendix B. 
 
 ```{r}
 # Make a correlation matrix
@@ -292,20 +289,6 @@ for (var in policy_vars) {
 }
 ```
 
-Government policy is first examined by identifying the relationship between the three variables that are selected as predictors and verifying that these variables have a positive correlation between themselves. To verify these relations, a correlation matrix was created using pairwise relations. We highlight the policy-associated variables and display the top 5 variables that are correlated with each. 
-
-```{r echo = TRUE}
-# Print strongest correlations
-print(top_correlations$School_spending)
-print(top_correlations$Local_tax_rate)
-print(top_correlations$Local_gov_spending)
-```
-
-For the 3 predicting variables, all 3 are were correlated the  highly with each other. `School_spending`, `Local_tax_rate`, and `Local_gov_spending` all have similar correlations, which verifies the covariate reliance on government policy.
-
-From here, these 3 variables are used to examine the relations each has on demographic factors that directly affect an individual’s economic mobility position. The demographic variables examined were `Seg_poverty`, `Gini`, `Gini_99`, `Middle_class`, `Single_mothers`, and `Test scores`. These were all used as sample variable measures because, based on previous findings, these variables all affect mobility. The sample variables are then used to generate scatter plots (see **Appendix A** ) examining each specific predicting variable. A linear regression line and *R* and *p* values are displayed to elaborate on the linear trend lines.
-
-`School_spending` seemed to be the only variable that has a linear relationship with the sample variables. While `Local_tax_rate` and `Local_gov_spending` did have linear relationships with the demographic variables, they were on the whole weak. Further, histograms and scatter plots that examine the distribution of each variable and its individual relationship to `Mobility` were generated to determine if the predictors have an initial linear regression relationship with mobility.
 
 ```{r}
 a <- ggplot(mobility, aes(x= School_spending)) + 
@@ -371,8 +354,7 @@ plot_grid(title,
           ncol = 1,
           rel_heights = c(0.1, 1))
 ```
-
-These results state to us that while there might be outlier data in all 3 relational graphs, there is still a somewhat linear relationship between mobility and tax rate. This is interesting because `School_spending` had was more highly correlated with `Mobility` than with demographic factors. `School_spending` and `Local_gov_spedning` do not seem to show the linear trends, but since `School_spending` had is so highly correlated with other demographic factors, it's inclusion in the model is justified.
+These results state to us that while there might be outlier data in all 3 relational graphs, there still shows to be somewhat of a linear relationship between Mobility and Tax rate. This is interesting because school_spending had a higher relationship with demographic factors. School_spending and local_gov_spending do not seem to show as strong of a linear trend, but since School_spending had a high relationship with other demographic factors, I still will use it in my model.
 
 ## Segregation factors
 
@@ -416,21 +398,20 @@ d <- ggplot(data = mobility, aes(x = Mobility, y = Seg_poverty)) +
 plot_four(a,c,b,d, title = "Segregation as a predictor of mobility")
 ```
 
-# Exploring Key Perdictors in Mobility
+# Modeling
+
+In our analysis of the factors associated with mobility, we employed both exploratory data analysis (EDA) and a multiple linear regression model, and a beta regression model to determine which variables exhibit a strong relationship with our outcome measure. Based on the regression output and correlation values from our EDA, we identified a subset of variables that appear particularly influential in explaining mobility.
 
 ## Linear model
-
-In our analysis of the factors associated with mobility, we employed both exploratory data analysis (EDA) and
-a multiple linear regression model, and a beta regression model to determine which variables exhibit a strong relationship with our outcome measure. Based on the regression output and correlation values from our EDA, we identified a subset of variables that appear particularly influential in explaining mobility.
 
 ```{r echo = TRUE}
 lm.1 <- lm(formula = Mobility ~ ., 
    data = mobility)
 
-summary(lm.1)
+c1 <- summary(lm.1)
 ```
 
-Taking into account the exploratory data analysis and the linear model from above, we now have a list of possible predictors that we can use.
+From the first model built (see Appendix C.1 for output), iSchool_spending and Local_tax_rate do not have statistical evidence to prove an effect on economic mobility. However, another model was made to solely focus on the effects of government policy on mobility position. This model calls the 3 predicting government policy variables, as well as the sample demographic variables used earlier. These variables are grouped and fitted into a regression formula. From here, the formula is fitted, and the initial summary is complete. From the full model, it is already shown that the p value for Local_gov_spending was 0.225, which indicates that it not statistically significant for predicting mobility. The variables that proved to be statistically significant were then moved to the next step.
 
 1. **Educational Spending**
 - *School Spending* | Higher per-pupil expenditures can signal greater investment in educational resources, facilities, and student  support programs, thereby fostering improved long-term mobility outcomes.
@@ -474,18 +455,21 @@ yikes <- lm(Mobility ~ ., data = high_cor)
 
 par(mfrow = c(2, 2))
 plot(yikes)
+c2 <- summary(yikes)
 ```
+A numerical summary can be found in Appendix C.2.
 
 We fitted the model, now let look for co-linearity between the variables then we can decide on how to deal with them. 
-```{r echo = TRUE}
+```{r}
 vif(yikes)
 ```
 Since the above factors are around 1-3, which suggest that colinearity isn't a huge concern. The highest VIF score is the "Middle_class" (about 4.097), which is borderline but still not extremely high. It's something to keep an eye on, but not a immediate concern.
-```{r echo = TRUE}
+```{r}
 coeftest(yikes, vcov = vcovHC(yikes, type = "HC3"))
 ```
-The above result is a summary of each predictors estimated coefficient, its standard error, the t-statistic (coefficient / standard error), and the associated p-value. In short, there are variables like Black, Seg_Racial, Middle_class, Progressivity, Manufacturing, Religious, Divorced, and Local_tax_rate show significant relationships while some of the others do not reach conventional significance thresholds. And we in fact use the more significant variables when choosing our next model below.
-```{r echo = TRUE}
+The result is a more refined model of each predictors estimated coefficient, its standard error, the t-statistic (coefficient / standard error), and the associated p-value (See Appendix C.3 for output). In short, there are variables like Black, Seg_Racial, Middle_class, Progressivity, Manufacturing, Religious, Divorced, and Local_tax_rate show significant relationships while some of the others do not reach conventional significance thresholds. And we in fact use the more significant variables when choosing our next model below.
+
+```{r}
 yikes_refit <- lm(Mobility ~ Black + 
                     Seg_racial +
                     Middle_class + 
@@ -496,11 +480,11 @@ yikes_refit <- lm(Mobility ~ Black +
                     Divorced + 
                     Local_tax_rate, 
                   data = high_cor)
-coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
+# coeftest(yikes_refit, vcov = vcovHC(yikes_refit, type = "HC3"))
 ```
 
-```{r echo = TRUE}
-summary(yikes_refit)
+```{r}
+c3 <- summary(yikes_refit)
 ```
 Having refined our model to include only statistically significant variables, we can now delve deeper into the data by identifying influential observations. The Q-Q plot below helps us pinpoint these observations, highlighting points that deviate from the expected distribution. These deviations may indicate outliers or data points that have a disproportionate impact on the model's performance, warranting further investigation.
 ```{r}
@@ -518,14 +502,15 @@ After examining the diagnostic plots (Residuals vs. Fitted, Q-Q Plot, Scale-Loca
 
 Now we just have to remove the outliers and refit the model.
 
-```{r echo=TRUE}
+```{r}
 high_cor_clean <- high_cor[-c(320, 325, 326, 385, 391, 393), ]
 yikes_clean <- lm(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced + Local_tax_rate, data = high_cor_clean)
 
-summary(yikes_clean)
+c4 <- summary(yikes_clean)
 
 par(mfrow = c(2, 2))
 plot(yikes_clean)
+
 ```
 
 
@@ -537,7 +522,7 @@ For the next model, I plan to use beta regression because it is specifically des
 
 We can confirm this in R with the following code:
 
-```{r}
+```{r echo = TRUE}
 all(high_cor$Mobility > 0 & high_cor$Mobility < 1)
 ```
 
@@ -572,7 +557,7 @@ Beta regression
 ```{r}
 yikes_beta <- betareg(Mobility ~ Black + Seg_racial + Middle_class + Progressivity + Manufacturing + Migration_in + Religious + Divorced + Local_tax_rate, 
                       data = high_cor)
-summary(yikes_beta)
+c5 <- summary(yikes_beta)
 par(mfrow = c(2, 2))
 plot(yikes_beta)
 ```
@@ -632,9 +617,68 @@ The negative AIC and BIC values indicate that the model has a high likelihood re
 
 # Appendices
 
-## Appendix A 
+## Appendix A
 
-```{r warning=FALSE}
+### A.1   Education covariate analysis
+
+```{r}
+cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
+corrplot(cor_matrix, 
+         method = "color",
+         type = "upper",
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200),
+         tl.cex = 0.6, 
+         number.cex = 0.8,
+         addCoef.col = "black",
+         tl.col = "black",
+         tl.srt = 30)
+```
+
+### A.2 	Policy covariate analysis
+
+```{r}
+# Make a heatmap
+corrplot(cor_matrix,
+         method = "color",  
+         tl.col = "black",  
+         tl.cex = 0.5, 
+         tl.srt = 45,
+         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200))
+```
+
+```{r}
+# Print strongest correlations
+print("School spending: ") 
+print(top_correlations$School_spending)
+print("Local tax rate: ")
+print(top_correlations$Local_tax_rate)
+print("Local government spending: ")
+print(top_correlations$Local_gov_spending)
+```
+
+```{r}
+mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
+          title = "Colinearity analysis of segregation",
+          progress = FALSE)
+```
+
+### A.3 Segregation covariate analysis
+
+```{r}
+mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
+  ggpairs(aes(alpha = 0.5), 
+          upper = list(continuous = wrap("cor", size = 5)),
+          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
+          title = "Colinearity analysis of income and income inequality",
+          progress = FALSE)
+```
+
+## Appendix B
+
+```{r message=FALSE, warning=FALSE}
 # Create scatter plots
 plot_scatter <- function(x_var, color, text_size = 5, r_p_size = 5, keep_axis_titles = FALSE) {  
   ggplot(mobility, aes(.data[[x_var]], School_spending)) +  
@@ -740,62 +784,37 @@ grid.arrange(
 
 ```
 
-## Appendix B - Colinearity Analysis
+## Appendix C
+
+### C.1 	Initial linear modeling output
 
 ```{r}
-# Make a heatmap
-corrplot(cor_matrix,
-         method = "color",  
-         tl.col = "black",  
-         tl.cex = 0.5, 
-         tl.srt = 45,
-         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200))
+print(c1)
 ```
 
-### 1 \t Education variables 
+### C.2 	"High correlation" linear modeling output
 
 ```{r}
-cor_matrix <- cor(edu_mobility, use = "pairwise.complete.obs") 
-corrplot(cor_matrix, 
-         method = "color",
-         type = "upper",
-         col = colorRampPalette(c("tomato", "white", "dodgerblue"))(200),
-         tl.cex = 0.6, 
-         number.cex = 0.8,
-         addCoef.col = "black",
-         tl.col = "black",
-         tl.srt = 30)
+print(c2)
 ```
 
-### 2 \t Government policy variables
+
+### C.3   Refined linear modeling output
 
 ```{r}
-mobility[c("Local_tax_rate", "Local_gov_spending", "School_spending", "Mobility")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 3)),
-          columnLabels = c("Tax Rate", "Gov Spending", "School Spending", "Mobility"),
-          title = "Colinearity analysis of Government Policy",
-          progress = FALSE)
+print(c3)
 ```
 
-### 3 \t Inequality variables
+
+### C.4   Final linear modeling output
 
 ```{r}
-mobility[c("Middle_class", "Income", "Gini", "Gini_99", "Share01")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 5)),
-          columnLabels = c("Middle class", "Income", "Gini index", "Adj. Gini", "Share01"),
-          title = "Colinearity analysis of income and income inequality",
-          progress = FALSE)
+print(c4)
 ```
 
-### 4 \t Segregation variables
+
+### C.5   Beta regression results
 
 ```{r}
-mobility[c("Seg_poverty", "Seg_racial", "Seg_affluence", "Seg_income")] %>%
-  ggpairs(aes(alpha = 0.5), 
-          upper = list(continuous = wrap("cor", size = 5)),
-          columnLabels = c("Poverty", "Race", "Affluence", "Income"),
-          title = "Colinearity analysis of segregation",
-          progress = FALSE)
+print(c5)
 ```
