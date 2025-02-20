@@ -40,12 +40,6 @@ theme_update(
   plot.title = element_text(size = 12, face = "italic")
 )
 ```
-## From datacamp
-[https://www.datacamp.com/tutorial/linear-regression-R][How to Do Linear Regression in R]
- 
-> "When a regression takes into account two or more predictors to create the linear regression, it’s called multiple linear regression. In R, to add another coefficient, add the symbol "+" for every additional variable you want to add to the model.
-
-Linear model: `lm([target] ~ [predictor], data = [data source])`
 
 ## Data preparation
 ```{r}
@@ -174,7 +168,8 @@ plot_grid(
 ```
 
 ```{r warning=FALSE}
-mobility$Urban <- as.factor(mobility$Urban)
+mobility <- mobility %>%
+  mutate(Urban = factor(Urban, levels = c(0, 1), labels = c("Rural", "Urban")))
 
 theme_update(
   axis.title.x = element_text(hjust = 0),  
